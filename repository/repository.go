@@ -301,7 +301,7 @@ func (r *Repository) Configuration() storage.Configuration {
 	return r.configuration
 }
 
-func (r *Repository) GetSnapshots() ([]objects.Checksum, error) {
+func (r *Repository) GetSnapshots() []objects.Checksum {
 	t0 := time.Now()
 	defer func() {
 		r.Logger().Trace("repository", "GetSnapshots(): %s", time.Since(t0))
@@ -311,7 +311,7 @@ func (r *Repository) GetSnapshots() ([]objects.Checksum, error) {
 	for snapshotID := range r.state.ListSnapshots() {
 		ret = append(ret, snapshotID)
 	}
-	return ret, nil
+	return ret
 }
 
 func (r *Repository) DeleteSnapshot(snapshotID objects.Checksum) error {

@@ -110,17 +110,8 @@ func cmd_sync(ctx *context.Context, repo *repository.Repository, args []string) 
 		return 1
 	}
 
-	srcSnapshots, err := srcRepository.GetSnapshots()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not get snapshots from repository: %s\n", srcRepository.Location(), err)
-		return 1
-	}
-
-	dstSnapshots, err := dstRepository.GetSnapshots()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not get snapshots list from repository: %s\n", dstRepository.Location(), err)
-		return 1
-	}
+	srcSnapshots := srcRepository.GetSnapshots()
+	dstSnapshots := dstRepository.GetSnapshots()
 
 	_ = syncSnapshotID
 

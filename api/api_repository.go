@@ -33,11 +33,7 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 
 	lrepository.RebuildState()
 
-	snapshotIDs, err := lrepository.GetSnapshots()
-	if err != nil {
-		return err
-	}
-
+	snapshotIDs := lrepository.GetSnapshots()
 	headers := make([]header.Header, 0, len(snapshotIDs))
 	for _, snapshotID := range snapshotIDs {
 		snap, err := snapshot.Load(lrepository, snapshotID)

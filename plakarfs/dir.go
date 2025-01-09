@@ -116,10 +116,7 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 		d.repo.RebuildState()
 
-		snapshotIDs, err := d.repo.GetSnapshots()
-		if err != nil {
-			return nil, err
-		}
+		snapshotIDs := d.repo.GetSnapshots()
 		dirDirs := make([]fuse.Dirent, 0)
 		for idx, snapshotID := range snapshotIDs {
 			dirDirs = append(dirDirs, fuse.Dirent{
@@ -150,8 +147,8 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 		dirEnt := fuse.Dirent{
 			Inode: entry.Stat().Ino(),
-			Name: child,
-			Type: fuse.DT_File,
+			Name:  child,
+			Type:  fuse.DT_File,
 		}
 		if entry.Stat().IsDir() {
 			dirEnt.Type = fuse.DT_Dir

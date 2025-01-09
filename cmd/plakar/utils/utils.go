@@ -160,20 +160,13 @@ func OpenSnapshotByPrefix(repo *repository.Repository, prefix string) (*snapshot
 	return snapshot.Load(repo, snapshotID)
 }
 
-func GetSnapshotsList(repo *repository.Repository) ([]objects.Checksum, error) {
-	snapshots, err := repo.GetSnapshots()
-	if err != nil {
-		return nil, err
-	}
-	return snapshots, nil
+func GetSnapshotsList(repo *repository.Repository) []objects.Checksum {
+	snapshots := repo.GetSnapshots()
+	return snapshots
 }
 
 func GetHeaders(repo *repository.Repository, prefixes []string) ([]*header.Header, error) {
-	snapshotsList, err := GetSnapshotsList(repo)
-	if err != nil {
-		return nil, err
-	}
-
+	snapshotsList := GetSnapshotsList(repo)
 	result := make([]*header.Header, 0)
 
 	// no prefixes, this is a full fetch
@@ -252,11 +245,7 @@ func GetHeaders(repo *repository.Repository, prefixes []string) ([]*header.Heade
 }
 
 func GetSnapshots(repo *repository.Repository, prefixes []string) ([]*snapshot.Snapshot, error) {
-	snapshotsList, err := GetSnapshotsList(repo)
-	if err != nil {
-		return nil, err
-	}
-
+	snapshotsList := GetSnapshotsList(repo)
 	result := make([]*snapshot.Snapshot, 0)
 
 	// no prefixes, this is a full fetch
