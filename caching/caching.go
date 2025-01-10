@@ -31,7 +31,7 @@ func (m *Manager) Close() error {
 	m.vfsCacheMutex.Lock()
 	defer m.vfsCacheMutex.Unlock()
 
-	for _, cache := range m.vfsCache {
+	for _, cache := range m.repositoryCache {
 		cache.Close()
 	}
 
