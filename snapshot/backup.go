@@ -100,6 +100,13 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 	filesChannel := make(chan importer.ScanRecord, 1000)
 
 	go func() {
+		startEvent := events.StartImporterEvent()
+		startEvent.SnapshotID = snap.Header.Identifier
+		snap.Event(startEvent)
+
+		nFiles := uint64(0)
+		nDirectories := uint64(0)
+		size := uint64(0)
 		for _record := range scanner {
 
 			if backupCtx.aborted.Load() {
@@ -137,12 +144,24 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 
 					if !record.FileInfo.Mode().IsDir() {
 						filesChannel <- record
+						atomic.AddUint64(&nFiles, +1)
+						if record.FileInfo.Mode().IsRegular() {
+							atomic.AddUint64(&size, uint64(record.FileInfo.Size()))
+						}
+					} else {
+						atomic.AddUint64(&nDirectories, +1)
 					}
 				}
 			}(_record)
 		}
 		wg.Wait()
 		close(filesChannel)
+		doneEvent := events.DoneImporterEvent()
+		doneEvent.SnapshotID = snap.Header.Identifier
+		doneEvent.NumFiles = nFiles
+		doneEvent.NumDirectories = nDirectories
+		doneEvent.Size = size
+		snap.Event(doneEvent)
 	}()
 
 	return filesChannel, nil

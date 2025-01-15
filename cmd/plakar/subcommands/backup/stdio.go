@@ -26,6 +26,14 @@ func startEventsProcessorStdio(ctx *appcontext.AppContext, quiet bool) eventsPro
 				if !quiet {
 					ctx.GetLogger().Info("%x: OK %s %s", event.SnapshotID[:4], checkMark, event.Pathname)
 				}
+			case events.StartImporter:
+				if !quiet {
+					ctx.GetLogger().Info("%x: importer job started at %s", event.SnapshotID[:4], event.Timestamp())
+				}
+			case events.DoneImporter:
+				if !quiet {
+					ctx.GetLogger().Info("%x: importer job done at %s", event.SnapshotID[:4], event.Timestamp())
+				}
 			case events.Done:
 				done <- struct{}{}
 			default:

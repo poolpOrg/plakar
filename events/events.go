@@ -364,3 +364,34 @@ func ChunkCorruptedEvent(snapshotID [32]byte, checksum [32]byte) ChunkCorrupted 
 func (e ChunkCorrupted) Timestamp() time.Time {
 	return e.ts
 }
+
+/**/
+type StartImporter struct {
+	ts time.Time
+
+	SnapshotID [32]byte
+}
+
+func StartImporterEvent() StartImporter {
+	return StartImporter{ts: time.Now()}
+}
+func (e StartImporter) Timestamp() time.Time {
+	return e.ts
+}
+
+/**/
+type DoneImporter struct {
+	ts time.Time
+
+	SnapshotID     [32]byte
+	NumFiles       uint64
+	NumDirectories uint64
+	Size           uint64
+}
+
+func DoneImporterEvent() DoneImporter {
+	return DoneImporter{ts: time.Now()}
+}
+func (e DoneImporter) Timestamp() time.Time {
+	return e.ts
+}
