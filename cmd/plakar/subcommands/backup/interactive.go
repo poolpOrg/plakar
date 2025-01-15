@@ -35,6 +35,9 @@ type Model struct {
 
 	countDirsOk     uint64
 	countDirsErrors uint64
+
+	importerSize uint64
+	backupSize   uint64
 }
 
 func (m Model) Init() tea.Cmd {
@@ -50,6 +53,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case events.FileOK:
 		m.countFilesOk++
 		m.lastLog = fmt.Sprintf("%x: %s", event.SnapshotID[:4], event.Pathname)
+		if event.Size > 0 {
+			m.backupSize += uint64(event.Size)
+		}
 
 	case events.FileError, events.PathError:
 		m.countFilesErrors++
@@ -77,6 +83,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case events.Done:
 		m.lastLog = "Done!"
 
+	case events.DoneImporter:
+		m.importerSize = event.Size
+
 	case tea.QuitMsg:
 		m.lastLog = "Aborted"
 		return m, tea.Quit
@@ -97,7 +106,13 @@ func (m Model) View() string {
 
 	var s strings.Builder
 
-	fmt.Fprintf(&s, "Duration: %ds\n", int64(m.elapsed.Seconds()))
+	fmt.Fprintf(&s, "Duration: %ds", int64(m.elapsed.Seconds()))
+
+	if m.importerSize > 0 {
+		fmt.Fprintf(&s, " (%d%%)", m.backupSize*100/m.importerSize)
+	}
+
+	fmt.Fprintf(&s, "\n")
 
 	fmt.Fprintf(&s, "Directories: %s %d", checkMark, m.countDirsOk)
 	if m.countDirsErrors > 0 {

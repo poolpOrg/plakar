@@ -118,7 +118,7 @@ func snapshotRestorePath(snap *Snapshot, fsc *vfs.Filesystem, exp exporter.Expor
 		} else if err := exp.SetPermissions(dest, entry.Stat()); err != nil {
 			snap.Event(events.FileErrorEvent(snap.Header.Identifier, pathname, err.Error()))
 		} else {
-			snap.Event(events.FileOKEvent(snap.Header.Identifier, pathname))
+			snap.Event(events.FileOKEvent(snap.Header.Identifier, pathname, entry.Size()))
 		}
 
 	}(entry)

@@ -405,7 +405,7 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 				backupCtx.recordError(record.Pathname, err)
 				return
 			}
-			snap.Event(events.FileOKEvent(snap.Header.Identifier, record.Pathname))
+			snap.Event(events.FileOKEvent(snap.Header.Identifier, record.Pathname, record.FileInfo.Size()))
 		}(_record)
 	}
 	scannerWg.Wait()

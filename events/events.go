@@ -220,10 +220,11 @@ type FileOK struct {
 
 	SnapshotID [32]byte
 	Pathname   string
+	Size       int64
 }
 
-func FileOKEvent(snapshotID [32]byte, pathname string) FileOK {
-	return FileOK{ts: time.Now(), SnapshotID: snapshotID, Pathname: pathname}
+func FileOKEvent(snapshotID [32]byte, pathname string, size int64) FileOK {
+	return FileOK{ts: time.Now(), SnapshotID: snapshotID, Pathname: pathname, Size: size}
 }
 func (e FileOK) Timestamp() time.Time {
 	return e.ts

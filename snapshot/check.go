@@ -122,7 +122,7 @@ func snapshotCheckPath(snap *Snapshot, fsc *vfs.Filesystem, pathname string, opt
 			return
 		}
 	}(file)
-	snap.Event(events.FileOKEvent(snap.Header.Identifier, pathname))
+	snap.Event(events.FileOKEvent(snap.Header.Identifier, pathname, file.Size()))
 	return true, nil
 }
 
