@@ -1,6 +1,7 @@
 package vfs
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"io/fs"
@@ -29,24 +30,53 @@ type Entry struct {
 	Summary *Summary `msgpack:"summary" json:"summary,omitempty"`
 
 	/* File specific fields */
-	SymlinkTarget string          `msgpack:"symlinkTarget,omitempty" json:"symlink_target"`
-	Object        *objects.Object `msgpack:"object,omitempty" json:"object"` // nil for !regular files
+	SymlinkTarget string          `msgpack:"symlinkTarget,omitempty" json:"symlink_target,omitempty"`
+	Object        *objects.Object `msgpack:"object,omitempty" json:"object,omitempty"` // nil for !regular files
 
 	/* Windows specific fields */
-	AlternateDataStreams []AlternateDataStream `msgpack:"alternate_data_streams,omitempty" json:"alternate_data_streams,omitempty"`
-	SecurityDescriptor   []byte                `msgpack:"security_descriptor,omitempty" json:"security_descriptor,omitempty"`
-	FileAttributes       uint32                `msgpack:"file_attributes,omitempty" json:"file_attributes,omitempty"`
+	AlternateDataStreams []AlternateDataStream `msgpack:"alternate_data_streams,omitempty" json:"alternate_data_streams"`
+	SecurityDescriptor   []byte                `msgpack:"security_descriptor,omitempty" json:"security_descriptor"`
+	FileAttributes       uint32                `msgpack:"file_attributes,omitempty" json:"file_attributes"`
 
 	/* Unix fields */
-	ExtendedAttributes []ExtendedAttribute `msgpack:"extended_attributes,omitempty" json:"extended_attributes,omitempty"`
+	ExtendedAttributes []ExtendedAttribute `msgpack:"extended_attributes,omitempty" json:"extended_attributes"`
 
 	/* Custom metadata and tags */
-	Classifications []Classification `msgpack:"classifications,omitempty" json:"classifications,omitempty"`
-	CustomMetadata  []CustomMetadata `msgpack:"custom_metadata,omitempty" json:"custom_metadata,omitempty"`
-	Tags            []string         `msgpack:"tags,omitempty" json:"tags,omitempty"`
+	Classifications []Classification `msgpack:"classifications,omitempty" json:"classifications"`
+	CustomMetadata  []CustomMetadata `msgpack:"custom_metadata,omitempty" json:"custom_metadata"`
+	Tags            []string         `msgpack:"tags,omitempty" json:"tags"`
 
 	/* Errors */
 	Errors *objects.Checksum `msgpack:"errors,omitempty" json:"errors,omitempty"`
+}
+
+// Return empty lists for nil slices.
+func (e *Entry) MarshalJSON() ([]byte, error) {
+	// Create an alias to avoid recursive MarshalJSON calls
+	type Alias Entry
+
+	ret := (*Alias)(e)
+
+	if ret.AlternateDataStreams == nil {
+		ret.AlternateDataStreams = []AlternateDataStream{}
+	}
+	if ret.SecurityDescriptor == nil {
+		ret.SecurityDescriptor = []byte{}
+	}
+	if ret.ExtendedAttributes == nil {
+		ret.ExtendedAttributes = []ExtendedAttribute{}
+	}
+	if ret.Classifications == nil {
+		ret.Classifications = []Classification{}
+	}
+	if ret.CustomMetadata == nil {
+		ret.CustomMetadata = []CustomMetadata{}
+	}
+	if ret.Tags == nil {
+		ret.Tags = []string{}
+	}
+
+	return json.Marshal(ret)
 }
 
 func NewEntry(parentPath string, record *importer.ScanRecord) *Entry {
@@ -291,7 +321,7 @@ func (vf *vfile) Seek(offset int64, whence int) (int64, error) {
 	case io.SeekEnd:
 		vf.rd = nil
 		vf.off = vf.Size()
-		for vf.objoff = len(chunks)-1; vf.objoff >= 0; vf.objoff-- {
+		for vf.objoff = len(chunks) - 1; vf.objoff >= 0; vf.objoff-- {
 			clen := int64(chunks[vf.objoff].Length)
 			if offset > clen {
 				vf.off -= clen

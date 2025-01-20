@@ -120,7 +120,7 @@ func NewFileInfo(name string, size int64, mode os.FileMode, modTime time.Time, d
 		Lino:     ino,
 		Luid:     uid,
 		Lgid:     gid,
-		Lnlink:   1,
+		Lnlink:   nlink,
 	}
 }
 

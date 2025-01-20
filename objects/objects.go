@@ -35,6 +35,31 @@ type Object struct {
 	Flags           uint32           `msgpack:"flags" json:"flags"`
 }
 
+// Return empty lists for nil slices.
+func (o *Object) MarshalJSON() ([]byte, error) {
+	// Create an alias to avoid recursive MarshalJSON calls
+	type Alias Object
+
+	ret := (*Alias)(o)
+
+	if ret.Chunks == nil {
+		ret.Chunks = []Chunk{}
+	}
+	if ret.Classifications == nil {
+		ret.Classifications = []Classification{}
+	}
+	if ret.CustomMetadata == nil {
+		ret.CustomMetadata = []CustomMetadata{}
+	}
+	if ret.Tags == nil {
+		ret.Tags = []string{}
+	}
+	if ret.Distribution == [256]byte{} {
+		ret.Distribution = [256]byte{}
+	}
+	return json.Marshal(ret)
+}
+
 func NewObject() *Object {
 	return &Object{
 		CustomMetadata: make([]CustomMetadata, 0),
