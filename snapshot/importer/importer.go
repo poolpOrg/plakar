@@ -112,6 +112,8 @@ func NewImporter(location string) (Importer, error) {
 			backendName = "fs"
 		} else if strings.HasPrefix(location, "ftp://") {
 			backendName = "ftp"
+		} else if strings.HasPrefix(location, "rclone://") {
+			backendName = "rclone"
 		} else {
 			if strings.Contains(location, "://") {
 				return nil, fmt.Errorf("unsupported importer protocol")
