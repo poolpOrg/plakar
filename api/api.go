@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"net/http"
 	"strings"
 
@@ -32,6 +33,8 @@ func handleError(w http.ResponseWriter, err error) {
 	case errors.Is(err, repository.ErrBlobNotFound):
 		fallthrough
 	case errors.Is(err, repository.ErrPackfileNotFound):
+		fallthrough
+	case errors.Is(err, fs.ErrNotExist):
 		fallthrough
 	case errors.Is(err, snapshot.ErrNotFound):
 		err = &ApiError{
