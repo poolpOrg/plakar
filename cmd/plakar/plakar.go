@@ -38,6 +38,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/snapshot/importer/s3"
 
 	_ "github.com/PlakarKorp/plakar/snapshot/exporter/fs"
+	_ "github.com/PlakarKorp/plakar/snapshot/exporter/rclone"
 	_ "github.com/PlakarKorp/plakar/snapshot/exporter/s3"
 
 	_ "github.com/PlakarKorp/plakar/classifier/backend/noop"

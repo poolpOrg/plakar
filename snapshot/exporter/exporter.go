@@ -56,6 +56,8 @@ func NewExporter(location string) (Exporter, error) {
 			backendName = "s3"
 		} else if strings.HasPrefix(location, "fs://") {
 			backendName = "fs"
+		} else if strings.HasPrefix(location, "rclone://") {
+			backendName = "rclone"
 		} else {
 			if strings.Contains(location, "://") {
 				return nil, fmt.Errorf("unsupported importer protocol")
