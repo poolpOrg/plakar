@@ -372,13 +372,3 @@ func (repository *Repository) DeletePackfile(checksum objects.Checksum) error {
 	}
 	return nil
 }
-
-//////
-
-func (repository *Repository) Commit(snapshotID objects.Checksum, data []byte) error {
-	_, err := repository.minioClient.PutObject(context.Background(), repository.bucketName, fmt.Sprintf("snapshots/%x/%s", snapshotID[0], hex.EncodeToString(snapshotID[:])), bytes.NewReader(data), int64(len(data)), minio.PutObjectOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}

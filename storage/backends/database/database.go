@@ -63,7 +63,7 @@ func (repo *Repository) Location() string {
 func (repo *Repository) connect(addr string) error {
 	var connectionString string
 	if strings.HasPrefix(addr, "sqlite://") {
-		repo.backend = "sqlite3"
+		repo.backend = "sqlite"
 		connectionString = addr[9:]
 	} else {
 		return fmt.Errorf("unsupported database backend: %s", addr)
@@ -75,7 +75,7 @@ func (repo *Repository) connect(addr string) error {
 	}
 	repo.conn = conn
 
-	if repo.backend == "sqlite3" {
+	if repo.backend == "sqlite" {
 		_, err = repo.conn.Exec("PRAGMA journal_mode=WAL;")
 		if err != nil {
 			return nil
@@ -169,23 +169,6 @@ func (repo *Repository) Open(location string) error {
 }
 
 func (repo *Repository) Close() error {
-	return nil
-}
-
-func (repo *Repository) Commit(snapshotID objects.Checksum, data []byte) error {
-	statement, err := repo.conn.Prepare(`INSERT INTO snapshots (snapshotID, data) VALUES(?, ?)`)
-	if err != nil {
-		return err
-	}
-	defer statement.Close()
-
-	repo.wrMutex.Lock()
-	_, err = statement.Exec(snapshotID, data)
-	repo.wrMutex.Unlock()
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

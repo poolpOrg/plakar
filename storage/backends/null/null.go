@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package fs
+package null
 
 import (
 	"bytes"
@@ -115,9 +115,5 @@ func (repository *Repository) GetPackfileBlob(checksum objects.Checksum, offset 
 }
 
 func (repository *Repository) DeletePackfile(checksum objects.Checksum) error {
-	return nil
-}
-
-func (repository *Repository) Commit(snapshotID objects.Checksum, data []byte) error {
 	return nil
 }
