@@ -20,7 +20,10 @@ func (ds *DBStore[K, V]) Get(idx int) (*btree.Node[K, int, V], error) {
 		return nil, err
 	}
 	node := &btree.Node[K, int, V]{}
-	_ = msgpack.Unmarshal(bytes, node)
+	err = msgpack.Unmarshal(bytes, node)
+	if err != nil {
+		return nil, err
+	}
 	return node, nil
 }
 
