@@ -243,7 +243,7 @@ func TestPersist(t *testing.T) {
 	}
 
 	store2 := InMemoryStore[rune, int]{}
-	root, err := Persist(tree1, &store2, func (e int) (int, error) { return e, nil })
+	root, err := Persist(tree1, &store2, func(e int) (int, error) { return e, nil })
 	if err != nil {
 		t.Fatalf("Failed to persist the tree: %v", err)
 	}
