@@ -12,10 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type configurationOptions struct {
-	*storage.Configuration
-}
-
 type ConfigurationOptions func(o *storage.Configuration)
 
 func WithConfigurationCompression(compression *compression.Configuration) ConfigurationOptions {
