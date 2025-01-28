@@ -31,7 +31,7 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	lrepository.RebuildState()
+	_ = lrepository.RebuildState()
 
 	snapshotIDs, err := lrepository.GetSnapshots()
 	if err != nil {
