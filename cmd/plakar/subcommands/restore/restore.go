@@ -102,7 +102,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 				if err != nil {
 					return 1, err
 				}
-				snap.Restore(exporterInstance, ctx.CWD, ctx.CWD, opts)
+				_ = snap.Restore(exporterInstance, ctx.CWD, ctx.CWD, opts)
 				snap.Close()
 				return 0, nil
 			}
