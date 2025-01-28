@@ -87,7 +87,7 @@ func (cmd *Exec) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		log.Fatal(err)
 	}
 	defer os.Remove(file.Name())
-	file.Chmod(0500)
+	_ = file.Chmod(0500)
 
 	_, err = io.Copy(file, rd)
 	if err != nil {
@@ -102,7 +102,7 @@ func (cmd *Exec) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	}
 	go func() {
 		defer stdin.Close()
-		io.Copy(stdin, os.Stdin)
+		_, _ = io.Copy(stdin, os.Stdin)
 	}()
 
 	stdout, err := p.StdoutPipe()
@@ -111,7 +111,7 @@ func (cmd *Exec) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	}
 	go func() {
 		defer stdout.Close()
-		io.Copy(os.Stdout, stdout)
+		_, _ = io.Copy(os.Stdout, stdout)
 	}()
 
 	stderr, err := p.StderrPipe()
@@ -120,7 +120,7 @@ func (cmd *Exec) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	}
 	go func() {
 		defer stdout.Close()
-		io.Copy(os.Stderr, stderr)
+		_, _ = io.Copy(os.Stderr, stderr)
 	}()
 	if p.Start() == nil {
 		p.Wait()
