@@ -42,7 +42,7 @@ func parse_cmd_diff(ctx *appcontext.AppContext, repo *repository.Repository, arg
 	var opt_highlight bool
 	flags := flag.NewFlagSet("diff", flag.ExitOnError)
 	flags.BoolVar(&opt_highlight, "highlight", false, "highlight output")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	if flags.NArg() != 2 {
 		fmt.Println("args", flags.Args())

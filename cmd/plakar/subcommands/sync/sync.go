@@ -42,7 +42,7 @@ func init() {
 
 func parse_cmd_sync(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("sync", flag.ExitOnError)
-	flags.Parse(args)
+	_ = flags.Parse(args)
 	return &Sync{
 		RepositoryLocation: repo.Location(),
 		RepositorySecret:   ctx.GetSecret(),

@@ -45,7 +45,7 @@ func parse_cmd_restore(ctx *appcontext.AppContext, repo *repository.Repository, 
 	flags.StringVar(&pullPath, "to", ctx.CWD, "base directory where pull will restore")
 	flags.BoolVar(&pullRebase, "rebase", false, "strip pathname when pulling")
 	flags.BoolVar(&opt_quiet, "quiet", false, "do not print progress")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	return &Restore{
 		RepositoryLocation: repo.Location(),

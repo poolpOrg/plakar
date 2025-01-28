@@ -40,7 +40,7 @@ func parse_cmd_checksum(ctx *appcontext.AppContext, repo *repository.Repository,
 	flags := flag.NewFlagSet("checksum", flag.ExitOnError)
 	flags.BoolVar(&enableFastChecksum, "fast", false, "enable fast checksum (return recorded checksum)")
 
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	if flags.NArg() == 0 {
 		ctx.GetLogger().Error("%s: at least one parameter is required", flags.Name())

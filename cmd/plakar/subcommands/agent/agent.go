@@ -67,7 +67,7 @@ func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, ar
 
 	flags := flag.NewFlagSet("agent", flag.ExitOnError)
 	flags.StringVar(&opt_prometheus, "prometheus", "", "prometheus exporter interface")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	return &Agent{
 		prometheus: opt_prometheus,

@@ -39,7 +39,7 @@ func parse_cmd_locate(ctx *appcontext.AppContext, repo *repository.Repository, a
 
 	flags := flag.NewFlagSet("locate", flag.ExitOnError)
 	flags.StringVar(&opt_snapshot, "snapshot", "", "snapshot to locate in")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	return &Locate{
 		RepositoryLocation: repo.Location(),

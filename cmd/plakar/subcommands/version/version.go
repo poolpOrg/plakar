@@ -34,7 +34,7 @@ func init() {
 
 func parse_cmd_version(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("version", flag.ExitOnError)
-	flags.Parse(args)
+	_ = flags.Parse(args)
 	return &Version{}, nil
 }
 

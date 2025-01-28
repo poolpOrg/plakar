@@ -40,7 +40,7 @@ func parse_cmd_help(ctx *appcontext.AppContext, repo *repository.Repository, arg
 	var opt_style string
 	flags := flag.NewFlagSet("help", flag.ExitOnError)
 	flags.StringVar(&opt_style, "style", "dracula", "style to use")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	command := ""
 	if flags.NArg() > 0 {

@@ -36,7 +36,7 @@ func init() {
 
 func parse_cmd_exec(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("exec", flag.ExitOnError)
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	if flags.NArg() == 0 {
 		ctx.GetLogger().Error("%s: at least one parameters is required", flags.Name())

@@ -43,7 +43,7 @@ func parse_cmd_create(ctx *appcontext.AppContext, repo *repository.Repository, a
 	flags := flag.NewFlagSet("create", flag.ExitOnError)
 	flags.BoolVar(&opt_noencryption, "no-encryption", false, "disable transparent encryption")
 	flags.BoolVar(&opt_nocompression, "no-compression", false, "disable transparent compression")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	if flags.NArg() > 1 {
 		return nil, fmt.Errorf("%s: too many parameters", flag.CommandLine.Name())

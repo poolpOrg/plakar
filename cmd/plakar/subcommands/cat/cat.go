@@ -43,7 +43,7 @@ func parse_cmd_cat(ctx *appcontext.AppContext, repo *repository.Repository, args
 	flags := flag.NewFlagSet("cat", flag.ExitOnError)
 	flags.BoolVar(&opt_nodecompress, "no-decompress", false, "do not try to decompress output")
 	flags.BoolVar(&opt_highlight, "highlight", false, "highlight output")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	if flags.NArg() == 0 {
 		return nil, fmt.Errorf("at least one parameter is required")
