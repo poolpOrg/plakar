@@ -51,7 +51,7 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 		limit = uint32(len(headers))
 	}
 
-	header.SortHeaders(headers, sortKeys)
+	_ = header.SortHeaders(headers, sortKeys)
 	if offset > uint32(len(headers)) {
 		headers = []header.Header{}
 	} else if offset+limit > uint32(len(headers)) {
