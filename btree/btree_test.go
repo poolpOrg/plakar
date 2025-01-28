@@ -311,9 +311,7 @@ func TestVisitDFS(t *testing.T) {
 	keySaw := []rune{}
 	tree.VisitDFS(func(ptr int, node *Node[rune, int, int]) error {
 		if node.isleaf() {
-			for i := range node.Keys {
-				keySaw = append(keySaw, node.Keys[i])
-			}
+			keySaw = append(keySaw, node.Keys...)
 		}
 		return nil
 	})
