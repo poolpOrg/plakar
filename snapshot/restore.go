@@ -97,7 +97,7 @@ func snapshotRestorePath(snap *Snapshot, fsc *vfs.Filesystem, exp exporter.Expor
 			v, ok := restoreContext.hardlinks[key]
 			restoreContext.hardlinksMutex.Unlock()
 			if ok {
-				os.Link(v, dest)
+				_ = os.Link(v, dest)
 				return
 			} else {
 				restoreContext.hardlinksMutex.Lock()
