@@ -260,7 +260,7 @@ func _TestSnapshotSign(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			urlSigner := NewSnapshotReaderURLSigner(token)
-			urlSigner.Sign(w, req)
+			_ = urlSigner.Sign(w, req)
 
 			response := w.Result()
 			defer func(Body io.ReadCloser) {
