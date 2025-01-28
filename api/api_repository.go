@@ -64,9 +64,7 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 		Total: len(snapshotIDs),
 		Items: make([]header.Header, len(headers)),
 	}
-	for i, header := range headers {
-		items.Items[i] = header
-	}
+	copy(items.Items, headers)
 
 	return json.NewEncoder(w).Encode(items)
 }
@@ -81,10 +79,7 @@ func repositoryStates(w http.ResponseWriter, r *http.Request) error {
 		Total: len(states),
 		Items: make([]objects.Checksum, len(states)),
 	}
-	for i, state := range states {
-		items.Items[i] = state
-	}
-
+	copy(items.Items, states)
 	return json.NewEncoder(w).Encode(items)
 }
 
@@ -115,10 +110,7 @@ func repositoryPackfiles(w http.ResponseWriter, r *http.Request) error {
 		Total: len(packfiles),
 		Items: make([]objects.Checksum, len(packfiles)),
 	}
-	for i, packfile := range packfiles {
-		items.Items[i] = packfile
-	}
-
+	copy(items.Items, packfiles)
 	return json.NewEncoder(w).Encode(items)
 }
 

@@ -127,9 +127,7 @@ func (repo *Repository) GetStates() ([]objects.Checksum, error) {
 	}
 
 	ret := make([]objects.Checksum, len(resGetStates.Checksums))
-	for i, checksum := range resGetStates.Checksums {
-		ret[i] = checksum
-	}
+	copy(ret, resGetStates.Checksums)
 	return ret, nil
 }
 
@@ -209,9 +207,7 @@ func (repo *Repository) GetPackfiles() ([]objects.Checksum, error) {
 	}
 
 	ret := make([]objects.Checksum, len(resGetPackfiles.Checksums))
-	for i, checksum := range resGetPackfiles.Checksums {
-		ret[i] = checksum
-	}
+	copy(ret, resGetPackfiles.Checksums)
 	return ret, nil
 }
 
