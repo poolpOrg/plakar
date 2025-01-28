@@ -17,8 +17,8 @@ type ParamErrorType string
 
 const (
 	InvalidArgument ParamErrorType = "invalid_argument"
-	BadNumber                      = "bad_number"
-	MissingArgument                = "missing_argument"
+	BadNumber       ParamErrorType = "bad_number"
+	MissingArgument ParamErrorType = "missing_argument"
 )
 
 type ParameterError struct {
