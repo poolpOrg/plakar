@@ -501,7 +501,7 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 			if !strings.HasPrefix(errentry.Name, prefix) {
 				break
 			}
-			if strings.Index(errentry.Name[len(prefix):], "/") != -1 {
+			if strings.Contains(errentry.Name[len(prefix):], "/") {
 				break
 			}
 			dirEntry.Summary.Below.Errors++
