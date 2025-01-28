@@ -103,7 +103,7 @@ func (repo *Repository) Create(location string, config storage.Configuration) er
 		return err
 	}
 	defer statement.Close()
-	statement.Exec()
+	_, _ = statement.Exec()
 
 	statement, err = repo.conn.Prepare(`CREATE TABLE IF NOT EXISTS states (
 		checksum	VARCHAR(64) NOT NULL PRIMARY KEY,
@@ -113,7 +113,7 @@ func (repo *Repository) Create(location string, config storage.Configuration) er
 		return err
 	}
 	defer statement.Close()
-	statement.Exec()
+	_, _ = statement.Exec()
 
 	statement, err = repo.conn.Prepare(`CREATE TABLE IF NOT EXISTS packfiles (
 		checksum	VARCHAR(64) NOT NULL PRIMARY KEY,
@@ -123,7 +123,7 @@ func (repo *Repository) Create(location string, config storage.Configuration) er
 		return err
 	}
 	defer statement.Close()
-	statement.Exec()
+	_, _ = statement.Exec()
 
 	jsonConfig, err := json.Marshal(config)
 	if err != nil {
