@@ -19,7 +19,6 @@ package database
 import (
 	"bytes"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -125,7 +124,7 @@ func (repo *Repository) Create(location string, config storage.Configuration) er
 	defer statement.Close()
 	statement.Exec()
 
-	jsonConfig, err := json.Marshal(config)
+	jsonConfig, err := config.Format("json")
 	if err != nil {
 		return err
 	}
@@ -151,21 +150,18 @@ func (repo *Repository) Open(location string) error {
 	}
 
 	var buffer []byte
-	var repositoryConfig storage.Configuration
 
 	err = repo.conn.QueryRow(`SELECT value FROM configuration`).Scan(&buffer)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(buffer, &repositoryConfig)
+	err = repo.config.InitFromBytes(buffer, "json")
 	if err != nil {
 		return err
 	}
-	repo.config = repositoryConfig
 
 	return nil
-
 }
 
 func (repo *Repository) Close() error {

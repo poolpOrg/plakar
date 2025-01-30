@@ -26,11 +26,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/PlakarKorp/plakar/compression"
 	"github.com/PlakarKorp/plakar/network"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/storage"
-	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -95,17 +93,7 @@ func (repository *Repository) Create(location string, config storage.Configurati
 		return err
 	}
 
-	jconfig, err := msgpack.Marshal(config)
-	if err != nil {
-		return err
-	}
-
-	compressedConfig, err := compression.DeflateStream("GZIP", bytes.NewReader(jconfig))
-	if err != nil {
-		return err
-	}
-
-	data, err := io.ReadAll(compressedConfig)
+	data, err := config.Format("msgpack")
 	if err != nil {
 		return err
 	}
@@ -144,37 +132,12 @@ func (repository *Repository) Open(location string) error {
 	if err != nil {
 		return err
 	}
-	stat, err := object.Stat()
+	defer object.Close()
+
+	err = repository.config.InitFromReader(object, "msgpack")
 	if err != nil {
 		return err
 	}
-
-	compressed := make([]byte, stat.Size)
-	_, err = object.Read(compressed)
-	if err != nil {
-		if err != io.EOF {
-			return err
-		}
-	}
-	object.Close()
-
-	jconfig, err := compression.InflateStream("GZIP", bytes.NewReader(compressed))
-	if err != nil {
-		return err
-	}
-
-	data, err := io.ReadAll(jconfig)
-	if err != nil {
-		return err
-	}
-
-	var config storage.Configuration
-	err = msgpack.Unmarshal(data, &config)
-	if err != nil {
-		return err
-	}
-
-	repository.config = config
 
 	return nil
 }

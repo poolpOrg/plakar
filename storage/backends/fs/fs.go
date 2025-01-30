@@ -17,7 +17,6 @@
 package fs
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"io/fs"
@@ -25,18 +24,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/PlakarKorp/plakar/compression"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/repository"
 	"github.com/PlakarKorp/plakar/storage"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 type Repository struct {
-	config     storage.Configuration
-	location   string
-	packfiles  Buckets
-	states     Buckets
+	config    storage.Configuration
+	location  string
+	packfiles Buckets
+	states    Buckets
 }
 
 func init() {
@@ -52,7 +49,6 @@ func NewRepository(location string) storage.Store {
 func (repo *Repository) Location() string {
 	return repo.location
 }
-
 
 func (repo *Repository) Path(args ...string) string {
 	root := repo.Location()
@@ -76,26 +72,20 @@ func (repo *Repository) Create(location string, config storage.Configuration) er
 
 	repo.packfiles = NewBuckets(repo.Path("packfiles"))
 	if err := repo.packfiles.Create(); err != nil {
-		return err;
+		return err
 	}
 
 	repo.states = NewBuckets(repo.Path("states"))
 	if err := repo.states.Create(); err != nil {
-		return err;
-	}
-
-	jconfig, err := msgpack.Marshal(config)
-	if err != nil {
-		return err
-	}
-	compressedConfig, err := compression.DeflateStream("GZIP", bytes.NewReader(jconfig))
-	if err != nil {
 		return err
 	}
 
-	return WriteToFileAtomic(repo.Path("CONFIG"), compressedConfig)
+	rd, err := config.Formatter("msgpack")
+	if err != nil {
+		return err
+	}
+	return WriteToFileAtomic(repo.Path("CONFIG"), rd)
 }
-
 
 func (repo *Repository) Open(location string) error {
 
@@ -108,23 +98,10 @@ func (repo *Repository) Open(location string) error {
 	}
 	defer rd.Close() // do we care about err?
 
-	jconfig, err := compression.InflateStream("GZIP", rd)
+	err = repo.config.InitFromReader(rd, "msgpack")
 	if err != nil {
 		return err
 	}
-
-	data, err := io.ReadAll(jconfig)
-	if err != nil {
-		return err
-	}
-
-	config := storage.Configuration{}
-	err = msgpack.Unmarshal(data, &config)
-	if err != nil {
-		return err
-	}
-
-	repo.config = config
 
 	return nil
 }
