@@ -37,7 +37,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const VERSION string = "0.6.0"
+const VERSION string = "1.0.0"
 
 type Configuration struct {
 	Version      string

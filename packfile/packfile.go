@@ -76,6 +76,8 @@ type PackFileFooter struct {
 }
 
 type Configuration struct {
+	MinSize uint32
+	AvgSize uint32
 	MaxSize uint32
 }
 
