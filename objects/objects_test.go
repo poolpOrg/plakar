@@ -68,14 +68,10 @@ func TestObjectNew(t *testing.T) {
 	object := NewObject()
 
 	require.NotNil(t, object)
-	require.NotNil(t, object.CustomMetadata)
 	require.NotNil(t, object.Checksum)
 	require.Nil(t, object.Chunks)
 	require.Equal(t, "", object.ContentType)
-	require.Nil(t, object.Classifications)
-	require.Nil(t, object.Tags)
 	require.Equal(t, float64(0), object.Entropy)
-	require.NotNil(t, object.Distribution)
 	require.Equal(t, uint32(0), object.Flags)
 }
 
@@ -93,14 +89,12 @@ func TestObjectNewFromBytes(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotNil(t, object)
-	require.Equal(t, []CustomMetadata{{Key: "test", Value: []byte("value")}}, object.CustomMetadata)
 
 	serialized = []byte("\x84\xa8checksum\xc4 \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa6chunks\xc0\xacdistribution\xc5\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa5flags\xce\x00\x00\x00\x00")
 	object, err = NewObjectFromBytes(serialized)
 	require.NoError(t, err)
 
 	require.NotNil(t, object)
-	require.Equal(t, []CustomMetadata{}, object.CustomMetadata)
 }
 
 func TestObjectSerialize(t *testing.T) {
@@ -108,8 +102,6 @@ func TestObjectSerialize(t *testing.T) {
 	require.NotNil(t, object)
 
 	// we set a value for CustomMetadata to avoid having msgpack.Unmarshal reset empty slices to nil and make the test fail
-	object.CustomMetadata = append(object.CustomMetadata, CustomMetadata{Key: "test", Value: []byte("value")})
-
 	serialized, err := object.Serialize()
 	require.NoError(t, err)
 	require.NotNil(t, serialized)
@@ -119,19 +111,4 @@ func TestObjectSerialize(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, *object, deserialized)
-}
-
-func TestObjectAddClassification(t *testing.T) {
-	object := NewObject()
-
-	analyzer := "test-analyzer"
-	classes := []string{"class1", "class2"}
-
-	object.AddClassification(analyzer, classes)
-
-	require.Equal(t, 1, len(object.Classifications))
-
-	classification := object.Classifications[0]
-	require.Equal(t, analyzer, classification.Analyzer)
-	require.Equal(t, classes, classification.Classes)
 }

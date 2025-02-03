@@ -203,9 +203,11 @@ func info_snapshot(repo *repository.Repository, snapshotID string) error {
 	}
 
 	fmt.Printf("Root: %x\n", header.Root)
-	fmt.Printf("Index: %x\n", header.Index)
-	fmt.Printf("Metadata: %x\n", header.Metadata)
-	fmt.Printf("Statistics: %x\n", header.Statistics)
+	fmt.Println("Indexes:")
+	for _, index := range header.Indexes {
+		fmt.Printf(" - %x\n", index)
+	}
+	//fmt.Printf("Statistics: %x\n", header.Statistics)
 
 	fmt.Println("Importer:")
 	fmt.Printf(" - Type: %s\n", header.Importer.Type)
