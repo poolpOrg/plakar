@@ -5,10 +5,14 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"fmt"
 	"io"
 
 	"golang.org/x/crypto/scrypt"
+)
+
+const (
+	saltSize  = 16
+	chunkSize = 64 * 1024 // Size of each chunk for encryption/decryption
 )
 
 type Configuration struct {
@@ -19,17 +23,12 @@ type Configuration struct {
 }
 
 type KDFParams struct {
-	Salt   []byte
+	Salt   [saltSize]byte
 	N      int
 	R      int
 	P      int
 	KeyLen int
 }
-
-const (
-	saltSize  = 16
-	chunkSize = 64 * 1024 // Size of each chunk for encryption/decryption
-)
 
 func DefaultConfiguration() *Configuration {
 	return &Configuration{
@@ -44,17 +43,14 @@ func DefaultConfiguration() *Configuration {
 	}
 }
 
-func Salt() ([]byte, error) {
-	salt := make([]byte, saltSize)
-	if _, err := rand.Read(salt); err != nil {
-		return nil, fmt.Errorf("failed to generate salt: %w", err)
-	}
-	return salt, nil
+func Salt() (salt [saltSize]byte, err error) {
+	_, err = rand.Read(salt[:])
+	return
 }
 
 // BuildSecretFromPassphrase generates a secret from a passphrase using scrypt
 func DeriveKey(params KDFParams, passphrase []byte) ([]byte, error) {
-	return scrypt.Key(passphrase, params.Salt, params.N, params.R, params.P, params.KeyLen)
+	return scrypt.Key(passphrase, params.Salt[:], params.N, params.R, params.P, params.KeyLen)
 }
 
 func DeriveCanary(key []byte) ([]byte, error) {
