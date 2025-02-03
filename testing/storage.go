@@ -9,6 +9,7 @@ import (
 	"github.com/PlakarKorp/plakar/hashing"
 	"github.com/PlakarKorp/plakar/packfile"
 	"github.com/PlakarKorp/plakar/storage"
+	"github.com/PlakarKorp/plakar/versioning"
 	"github.com/google/uuid"
 )
 
@@ -26,7 +27,7 @@ func WithConfigurationCompression(compression *compression.Configuration) Config
 
 func NewConfiguration(opts ...ConfigurationOptions) *storage.Configuration {
 	conf := storage.Configuration{
-		Version:      storage.VERSION,
+		Version:      versioning.FromString(storage.VERSION),
 		Timestamp:    time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 		RepositoryID: uuid.MustParse("00ff0000-0000-4000-a000-000000000001"),
 

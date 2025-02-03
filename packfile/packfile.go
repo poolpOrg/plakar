@@ -7,32 +7,36 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	"github.com/PlakarKorp/plakar/objects"
+	"github.com/PlakarKorp/plakar/versioning"
 )
 
-const VERSION = 100
+const VERSION = "1.0.0"
 
 type Type uint8
 
 const (
-	TYPE_SNAPSHOT  Type = 1
-	TYPE_CHUNK     Type = 2
-	TYPE_OBJECT    Type = 3
-	TYPE_VFS       Type = 4
-	TYPE_VFS_ENTRY Type = 5
-	TYPE_CHILD     Type = 6
-	TYPE_SIGNATURE Type = 7
-	TYPE_ERROR     Type = 8
+	TYPE_SNAPSHOT    Type = 1
+	TYPE_CHUNK       Type = 2
+	TYPE_OBJECT      Type = 3
+	TYPE_VFS         Type = 4
+	TYPE_VFS_ENTRY   Type = 5
+	TYPE_INDEX       Type = 6
+	TYPE_INDEX_ENTRY Type = 7
+	TYPE_SIGNATURE   Type = 8
+	TYPE_ERROR       Type = 9
 )
 
 type Blob struct {
 	Type     Type
-	Checksum [32]byte
+	Checksum objects.Checksum
 	Offset   uint32
 	Length   uint32
 }
 
 func Types() []Type {
-	return []Type{TYPE_SNAPSHOT, TYPE_CHUNK, TYPE_OBJECT, TYPE_VFS, TYPE_VFS_ENTRY, TYPE_CHILD, TYPE_SIGNATURE, TYPE_ERROR}
+	return []Type{TYPE_SNAPSHOT, TYPE_CHUNK, TYPE_OBJECT, TYPE_VFS, TYPE_VFS_ENTRY, TYPE_INDEX, TYPE_INDEX_ENTRY, TYPE_SIGNATURE, TYPE_ERROR}
 }
 
 func (b Blob) TypeName() string {
@@ -47,8 +51,10 @@ func (b Blob) TypeName() string {
 		return "vfs"
 	case TYPE_VFS_ENTRY:
 		return "vfs_entry"
-	case TYPE_CHILD:
-		return "directory"
+	case TYPE_INDEX:
+		return "index"
+	case TYPE_INDEX_ENTRY:
+		return "index_entry"
 	case TYPE_SIGNATURE:
 		return "signature"
 	case TYPE_ERROR:
@@ -65,11 +71,11 @@ type PackFile struct {
 }
 
 type PackFileFooter struct {
-	Version       uint32
-	Timestamp     int64
-	Count         uint32
-	IndexOffset   uint32
-	IndexChecksum [32]byte
+	Version     versioning.Version
+	Timestamp   int64
+	Count       uint32
+	IndexOffset uint32
+	// IndexChecksum objects.Checksum
 }
 
 type Configuration struct {
@@ -100,9 +106,9 @@ func NewFooterFromBytes(serialized []byte) (PackFileFooter, error) {
 	if err := binary.Read(reader, binary.LittleEndian, &footer.IndexOffset); err != nil {
 		return footer, err
 	}
-	if err := binary.Read(reader, binary.LittleEndian, &footer.IndexChecksum); err != nil {
-		return footer, err
-	}
+	//if err := binary.Read(reader, binary.LittleEndian, &footer.IndexChecksum); err != nil {
+	//	return footer, err
+	//}
 	return footer, nil
 }
 
@@ -141,7 +147,7 @@ func New() *PackFile {
 		Blobs: make([]byte, 0),
 		Index: make([]Blob, 0),
 		Footer: PackFileFooter{
-			Version:   VERSION,
+			Version:   versioning.FromString(VERSION),
 			Timestamp: time.Now().UnixNano(),
 			Count:     0,
 		},
@@ -167,9 +173,9 @@ func NewFromBytes(serialized []byte) (*PackFile, error) {
 	if err := binary.Read(reader, binary.LittleEndian, &footer.IndexOffset); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(reader, binary.LittleEndian, &footer.IndexChecksum); err != nil {
-		return nil, err
-	}
+	//if err := binary.Read(reader, binary.LittleEndian, &footer.IndexChecksum); err != nil {
+	//	return nil, err
+	//}
 
 	_, err = reader.Seek(0, io.SeekStart)
 	if err != nil {
@@ -229,10 +235,10 @@ func NewFromBytes(serialized []byte) (*PackFile, error) {
 		})
 		remaining -= (len(checksum) + 9)
 	}
-	checksum := [32]byte(hasher.Sum(nil))
-	if checksum != p.Footer.IndexChecksum {
-		return nil, fmt.Errorf("index checksum mismatch")
-	}
+	//checksum := [32]byte(hasher.Sum(nil))
+	//if checksum != p.Footer.IndexChecksum {
+	//	return nil, fmt.Errorf("index checksum mismatch")
+	//}
 
 	return p, nil
 }
@@ -271,7 +277,7 @@ func (p *PackFile) Serialize() ([]byte, error) {
 			return nil, err
 		}
 	}
-	p.Footer.IndexChecksum = [32]byte(hasher.Sum(nil))
+	//p.Footer.IndexChecksum = [32]byte(hasher.Sum(nil))
 
 	if err := binary.Write(&buffer, binary.LittleEndian, p.Footer.Version); err != nil {
 		return nil, err
@@ -285,9 +291,9 @@ func (p *PackFile) Serialize() ([]byte, error) {
 	if err := binary.Write(&buffer, binary.LittleEndian, p.Footer.IndexOffset); err != nil {
 		return nil, err
 	}
-	if err := binary.Write(&buffer, binary.LittleEndian, p.Footer.IndexChecksum); err != nil {
-		return nil, err
-	}
+	//if err := binary.Write(&buffer, binary.LittleEndian, p.Footer.IndexChecksum); err != nil {
+	//	return nil, err
+	//}
 
 	return buffer.Bytes(), nil
 }
@@ -363,7 +369,7 @@ func (p *PackFile) SerializeFooter() ([]byte, error) {
 			return nil, err
 		}
 	}
-	p.Footer.IndexChecksum = [32]byte(hasher.Sum(nil))
+	//p.Footer.IndexChecksum = [32]byte(hasher.Sum(nil))
 
 	buffer.Reset()
 	if err := binary.Write(&buffer, binary.LittleEndian, p.Footer.Version); err != nil {
@@ -378,9 +384,9 @@ func (p *PackFile) SerializeFooter() ([]byte, error) {
 	if err := binary.Write(&buffer, binary.LittleEndian, p.Footer.IndexOffset); err != nil {
 		return nil, err
 	}
-	if err := binary.Write(&buffer, binary.LittleEndian, p.Footer.IndexChecksum); err != nil {
-		return nil, err
-	}
+	//if err := binary.Write(&buffer, binary.LittleEndian, p.Footer.IndexChecksum); err != nil {
+	//	return nil, err
+	//}
 
 	return buffer.Bytes(), nil
 }

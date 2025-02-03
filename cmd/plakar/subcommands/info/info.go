@@ -17,7 +17,6 @@
 package info
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -403,9 +402,9 @@ func info_packfile(repo *repository.Repository, args []string) error {
 			hasher := sha256.New()
 			hasher.Write(indexbuf)
 
-			if !bytes.Equal(hasher.Sum(nil), footer.IndexChecksum[:]) {
-				log.Fatal("index checksum mismatch")
-			}
+			//if !bytes.Equal(hasher.Sum(nil), footer.IndexChecksum[:]) {
+			//	log.Fatal("index checksum mismatch")
+			//}
 
 			rawPackfile = append(rawPackfile, indexbuf...)
 			rawPackfile = append(rawPackfile, footerbuf...)
@@ -415,9 +414,9 @@ func info_packfile(repo *repository.Repository, args []string) error {
 				log.Fatal(err)
 			}
 
-			fmt.Printf("Version: %d.%d.%d\n", p.Footer.Version/100, p.Footer.Version%100/10, p.Footer.Version%10)
+			fmt.Printf("Version: %s\n", p.Footer.Version)
 			fmt.Printf("Timestamp: %s\n", time.Unix(0, p.Footer.Timestamp))
-			fmt.Printf("Index checksum: %x\n", p.Footer.IndexChecksum)
+			//fmt.Printf("Index checksum: %x\n", p.Footer.IndexChecksum)
 			fmt.Println()
 
 			for i, entry := range p.Index {
@@ -459,10 +458,6 @@ func info_object(repo *repository.Repository, objectID string) error {
 
 	fmt.Printf("object: %x\n", object.Checksum)
 	fmt.Println("  type:", object.ContentType)
-	if len(object.Tags) > 0 {
-		fmt.Println("  tags:", strings.Join(object.Tags, ","))
-	}
-
 	fmt.Println("  chunks:")
 	for _, chunk := range object.Chunks {
 		fmt.Printf("    checksum: %x\n", chunk.Checksum)

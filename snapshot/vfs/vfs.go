@@ -11,13 +11,21 @@ import (
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/packfile"
 	"github.com/PlakarKorp/plakar/repository"
+	"github.com/PlakarKorp/plakar/versioning"
 )
 
-const VERSION = 002
+const VFS_VERSION = "1.0.0"
+const VFS_ENTRY_VERSION = "1.0.0"
+
+type Score struct {
+	Key   string
+	Value float64
+}
 
 type Classification struct {
 	Analyzer string   `msgpack:"analyzer" json:"analyzer"`
 	Classes  []string `msgpack:"classes" json:"classes"`
+	Scores   []Score  `msgpack:"scores" json:"scores"`
 }
 
 type ExtendedAttribute struct {
@@ -36,8 +44,9 @@ type AlternateDataStream struct {
 }
 
 type Filesystem struct {
-	tree *btree.BTree[string, objects.Checksum, objects.Checksum]
-	repo *repository.Repository
+	Version versioning.Version
+	tree    *btree.BTree[string, objects.Checksum, objects.Checksum]
+	repo    *repository.Repository
 }
 
 func PathCmp(a, b string) int {
@@ -115,7 +124,7 @@ func (fsc *Filesystem) resolveEntry(csum objects.Checksum) (*Entry, error) {
 		return nil, err
 	}
 
-	return EntryFromBytes(bytes)	
+	return EntryFromBytes(bytes)
 }
 
 func (fsc *Filesystem) Open(path string) (fs.File, error) {

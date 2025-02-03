@@ -34,13 +34,14 @@ import (
 	"github.com/PlakarKorp/plakar/hashing"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/packfile"
+	"github.com/PlakarKorp/plakar/versioning"
 	"github.com/google/uuid"
 )
 
-const VERSION string = "1.0.0"
+const VERSION = "1.0.0"
 
 type Configuration struct {
-	Version      string
+	Version      versioning.Version
 	Timestamp    time.Time
 	RepositoryID uuid.UUID
 
@@ -53,7 +54,7 @@ type Configuration struct {
 
 func NewConfiguration() *Configuration {
 	return &Configuration{
-		Version:      VERSION,
+		Version:      versioning.FromString(VERSION),
 		Timestamp:    time.Now(),
 		RepositoryID: uuid.Must(uuid.NewRandom()),
 
