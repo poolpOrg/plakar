@@ -1,0 +1,74 @@
+.Dd February 1, 2025
+.Dt PLAKAR-INFO 1
+.Os
+.Sh NAME
+.Nm plakar info
+.Nd Display detailed information about a Plakar repository, snapshot, or other objects
+.Sh SYNOPSIS
+.Nm
+.Op Cm errors | object | packfile | snapshot | state | vfs
+.Sh DESCRIPTION
+The
+.Nm
+command provides detailed information about a Plakar repository,
+snapshots, objects, and various internal data structures.
+The type of information displayed depends on the specified argument.
+Without any arguents, display information about the repository.
+.Pp
+The sub-commands are as follows:
+.Bl -tag -width Ds
+.It Cm errors Ar snapshotID
+Display the list of errors in the given snapshot.
+.It Cm object Ar objectID
+Display information about a specific object, including its checksum,
+type, tags, and associated data chunks.
+.It Cm packfile Ar packfileID
+Show details of packfiles, including entries and checksums, which
+store object data within the repository.
+.It Cm snapshot Ar snapshotID
+Show detailed information about a specific snapshot, including its
+metadata, directory and file count, and size.
+.It Cm state
+List or describe the states in the repository.
+.It Cm vfs Ar snapshotID : Ns Ar path
+Show filesystem (VFS) details for a specific path within a snapshot,
+listing directory or file attributes, including permissions,
+ownership, and custom metadata.
+.El
+.Sh EXAMPLES
+Show repository information:
+.Bd -literal -offset indent
+plakar info
+.Ed
+.Pp
+Show detailed information for a snapshot:
+.Bd -literal -offset indent
+plakar info snapshot abc123
+.Ed
+.Pp
+List all states in the repository:
+.Bd -literal -offset indent
+plakar info state
+.Ed
+.Pp
+Display a specific object within a snapshot:
+.Bd -literal -offset indent
+plakar info object 1234567890abcdef
+.Ed
+.Pp
+Display filesystem details for a path within a snapshot:
+.Bd -literal -offset indent
+plakar info vfs abc123:/etc/passwd
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as an invalid snapshot or object ID, or a
+failure to retrieve the requested data.
+.El
+.Sh SEE ALSO
+.Xr plakar 1 ,
+.Xr plakar-snapshot 1

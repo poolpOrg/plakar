@@ -1,0 +1,72 @@
+.Dd January 29, 2025
+.Dt PLAKAR-BACKUP 1
+.Os
+.Sh NAME
+.Nm plakar backup
+.Nd Create a new snapshot of a directory in a Plakar repository
+.Sh SYNOPSIS
+.Nm
+.Op Fl concurrency Ar number
+.Op Fl exclude Ar pattern
+.Op Fl excludes Ar file
+.Op Fl quiet
+.Op Fl stdio
+.Op Fl tag Ar tag
+.Op Ar directory
+.Sh DESCRIPTION
+The
+.Nm
+command creates a new snapshot of
+.Ar directory ,
+or the current directory,
+in a Plakar repository.
+Snapshots can be filtered to exclude specific files or directories
+based on patterns provided through options.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl concurrency Ar number
+Set the maximum number of parallel tasks for faster processing.
+Defaults to
+.Dv 8 * CPU count + 1 .
+.It Fl exclude Ar pattern
+Specify individual exclusion patterns to ignore files or directories
+in the backup.
+This option can be repeated.
+.It Fl excludes Ar file
+Specify a file containing exclusion patterns, one per line, to ignore
+files or directories in the backup.
+.It Fl quiet
+Suppress output to standard input, only logging errors and warnings.
+.It Fl stdio
+Output one line per file to standard output instead of the default
+interactive output.
+.It Fl tag Ar tag
+Specify a tag to assign to the snapshot for easier identification.
+.El
+.Sh EXAMPLES
+Create a snapshot of the current directory with a tag:
+.Bd -literal -offset indent
+plakar backup -tag "daily_backup"
+.Ed
+.Pp
+Backup a specific directory with exclusion patterns from a file:
+.Bd -literal -offset indent
+plakar backup -excludes /path/to/exclude_file /path/to/directory
+.Ed
+.Pp
+Backup a directory with specific file exclusions:
+.Bd -literal -offset indent
+plakar backup -exclude "*.tmp" -exclude "*.log" /path/to/directory
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully, snapshot created.
+.It >0
+An error occurred, such as failure to access the repository or issues
+with exclusion patterns.
+.El
+.Sh SEE ALSO
+.Xr plakar 1

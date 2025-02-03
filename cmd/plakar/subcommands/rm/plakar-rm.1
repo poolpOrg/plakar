@@ -1,0 +1,68 @@
+.Dd January 28, 2025
+.Dt PLAKAR-RM 1
+.Os
+.Sh NAME
+.Nm plakar rm
+.Nd Remove snapshots from the Plakar repository
+.Sh SYNOPSIS
+.Nm
+.Op Fl older Ar date
+.Op Fl tag Ar tag
+.Op Ar snapshotID ...
+.Sh DESCRIPTION
+The
+.Nm
+command deletes snapshots from a Plakar repository.
+Snapshots can be filtered for deletion by age, by tag, or by
+specifying the snapshot IDs to remove.
+If no
+.Ar snapshotID
+are provided, either
+.Fl older
+or
+.Fl tag
+must be specified to filter the snapshots to delete.
+.Pp
+The arguments are as follows:
+.Bl -tag -width Ds
+.It Fl older Ar date
+Remove snapshots older than the specified date.
+Accepted formats include relative durations
+.Pq e.g. "2d" for two days, "1w" for one week
+or specific dates in various formats
+.Pq e.g. "2006-01-02 15:04:05" .
+.It Fl tag Ar tag
+Filter snapshots by tag, deleting only those that contain the specified tag.
+.El
+.Sh EXAMPLES
+Remove a specific snapshot by ID:
+.Bd -literal -offset indent
+plakar rm abc123
+.Ed
+.Pp
+Remove snapshots older than 30 days:
+.Bd -literal -offset indent
+plakar rm -older "30d"
+.Ed
+.Pp
+Remove snapshots with a specific tag:
+.Bd -literal -offset indent
+plakar rm -tag "backup"
+.Ed
+.Pp
+Remove snapshots older than 1 year with a specific tag:
+.Bd -literal -offset indent
+plakar rm -older "1y" -tag "archive"
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as invalid date format or failure to delete a
+snapshot.
+.El
+.Sh SEE ALSO
+.Xr plakar 1 ,
+.Xr plakar-backup 1

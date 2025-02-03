@@ -13,6 +13,7 @@ import (
 	_ "github.com/PlakarKorp/go-cdc-chunkers/chunkers/fastcdc"
 	_ "github.com/PlakarKorp/go-cdc-chunkers/chunkers/ultracdc"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/caching"
 	"github.com/PlakarKorp/plakar/compression"
 	"github.com/PlakarKorp/plakar/encryption"
 	"github.com/PlakarKorp/plakar/hashing"
@@ -54,6 +55,7 @@ func New(ctx *appcontext.AppContext, store storage.Store, secret []byte) (*Repos
 	if err := r.RebuildState(); err != nil {
 		return nil, err
 	}
+
 	return r, nil
 }
 
@@ -107,7 +109,7 @@ func (r *Repository) RebuildState() error {
 	// build delta of local and remote states
 	localStatesMap := make(map[objects.Checksum]struct{})
 	outdatedStates := make([]objects.Checksum, 0)
-	for _, stateID := range localStates {
+	for stateID := range localStates {
 		localStatesMap[stateID] = struct{}{}
 
 		if _, exists := remoteStatesMap[stateID]; !exists {
@@ -141,6 +143,11 @@ func (r *Repository) RebuildState() error {
 	}
 
 	r.state = aggregatedState
+
+	// The first Serial id is our repository ID, this allows us to deal
+	// naturally with concurrent first backups.
+	r.state.UpdateSerialOr(r.configuration.RepositoryID)
+
 	return nil
 }
 
@@ -268,6 +275,10 @@ func (r *Repository) Chunker(rd io.ReadCloser) (*chunkers.Chunker, error) {
 		NormalSize: int(chunkingNormalSize),
 		MaxSize:    int(chunkingMaxSize),
 	})
+}
+
+func (r *Repository) NewStateDelta(cache *caching.ScanCache) *state.LocalState {
+	return r.state.Derive(cache)
 }
 
 func (r *Repository) Location() string {

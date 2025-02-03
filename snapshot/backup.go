@@ -31,9 +31,7 @@ type BackupContext struct {
 	abortedReason  error
 	imp            importer.Importer
 	maxConcurrency chan bool
-
-	fileidx   *btree.BTree[string, int, vfs.Entry]
-	mufileidx sync.Mutex
+	scanCache      *caching.ScanCache
 
 	erridx   *btree.BTree[string, int, ErrorItem]
 	muerridx sync.Mutex
@@ -46,21 +44,18 @@ type BackupOptions struct {
 	Excludes       []glob.Glob
 }
 
-func (bc *BackupContext) recordFile(file *importer.ScanRecord) error {
-	entry := vfs.NewEntry(filepath.Dir(file.Pathname), file)
+func (bc *BackupContext) recordEntry(entry *vfs.Entry) error {
+	path := entry.Path()
 
-	path := file.Pathname
-	if path != "/" {
-		path = strings.TrimSuffix(path, "/")
+	bytes, err := entry.ToBytes()
+	if err != nil {
+		return err
 	}
 
-	bc.mufileidx.Lock()
-	err := bc.fileidx.Insert(path, *entry)
-	bc.mufileidx.Unlock()
-	if err == btree.ErrExists {
-		err = nil
+	if entry.FileInfo.IsDir() {
+		return bc.scanCache.PutDirectory(path, bytes)
 	}
-	return err
+	return bc.scanCache.PutFile(path, bytes)
 }
 
 func (bc *BackupContext) recordError(path string, err error) error {
@@ -137,11 +132,6 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 				case importer.ScanRecord:
 					snap.Event(events.PathEvent(snap.Header.Identifier, record.Pathname))
 
-					if err := backupCtx.recordFile(&record); err != nil {
-						backupCtx.recordError(record.Pathname, err)
-						return
-					}
-
 					if !record.FileInfo.Mode().IsDir() {
 						filesChannel <- record
 						atomic.AddUint64(&nFiles, +1)
@@ -153,9 +143,14 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 						if snap.Header.Importer.Directory == record.Pathname {
 							snap.Header.Importer.Directory = filepath.Dir(record.Pathname)
 						}
-
 					} else {
 						atomic.AddUint64(&nDirectories, +1)
+
+						entry := vfs.NewEntry(path.Dir(record.Pathname), &record)
+						if err := backupCtx.recordEntry(entry); err != nil {
+							backupCtx.recordError(record.Pathname, err)
+							return
+						}
 					}
 				}
 			}(_record)
@@ -223,15 +218,7 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 	backupCtx := &BackupContext{
 		imp:            imp,
 		maxConcurrency: make(chan bool, maxConcurrency),
-	}
-
-	filestore := caching.DBStore[string, vfs.Entry]{
-		Prefix: "__path__",
-		Cache:  snap.scanCache,
-	}
-	backupCtx.fileidx, err = btree.New(&filestore, vfs.PathCmp, 50)
-	if err != nil {
-		return err
+		scanCache:      snap.scanCache,
 	}
 
 	errstore := caching.DBStore[string, ErrorItem]{
@@ -402,11 +389,7 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 				}
 			}
 
-			// Update the file since we may have set its Object field
-			backupCtx.mufileidx.Lock()
-			err := backupCtx.fileidx.Update(record.Pathname, *fileEntry)
-			backupCtx.mufileidx.Unlock()
-			if err != nil {
+			if err := backupCtx.recordEntry(fileEntry); err != nil {
 				backupCtx.recordError(record.Pathname, err)
 				return
 			}
@@ -429,22 +412,32 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 		return err
 	}
 
-	var rootSummary *vfs.Summary
-
-	fileiter, err := backupCtx.fileidx.ScanAllReverse()
+	filestore := caching.DBStore[string, *vfs.Entry]{
+		Prefix: "__path__",
+		Cache: snap.scanCache,
+	}
+	fileidx, err := btree.New(&filestore, vfs.PathCmp, 50)
 	if err != nil {
 		return err
 	}
 
-	for fileiter.Next() {
+	var rootSummary *vfs.Summary
+
+	diriter := backupCtx.scanCache.EnumerateKeysWithPrefix("__directory__:", true)
+	if err != nil {
+		return err
+	}
+
+	for dirPath, bytes := range diriter {
 		select {
 		case <-snap.AppContext().GetContext().Done():
 			return snap.AppContext().GetContext().Err()
 		default:
 		}
-		dirPath, dirEntry := fileiter.Current()
-		if !dirEntry.Stat().IsDir() {
-			continue
+
+		dirEntry, err := vfs.EntryFromBytes(bytes)
+		if err != nil {
+			return err
 		}
 
 		prefix := dirPath
@@ -452,18 +445,22 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 			prefix += "/"
 		}
 
-		childiter, err := backupCtx.fileidx.ScanFrom(prefix)
-		if err != nil {
-			continue
-		}
+		childiter := backupCtx.scanCache.EnumerateKeysWithPrefix("__file__:"+prefix, false)
 
-		for childiter.Next() {
-			childPath, childEntry := childiter.Current()
-			if !strings.HasPrefix(childPath, prefix) {
-				break
+		for relpath, bytes := range childiter {
+			if strings.Contains(relpath, "/") {
+				continue
 			}
-			if strings.Index(childPath[len(prefix):], "/") != -1 {
-				break
+
+			childEntry, err := vfs.EntryFromBytes(bytes)
+			if err != nil {
+				return err
+			}
+
+			childPath := prefix + relpath
+
+			if err := fileidx.Insert(childPath, childEntry); err != nil && err != btree.ErrExists {
+				return err
 			}
 
 			if childEntry.Stat().Mode().IsDir() {
@@ -495,10 +492,6 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 			dirEntry.Summary.Directory.Children++
 		}
 
-		if err := childiter.Err(); err != nil {
-			return err
-		}
-
 		erriter, err := backupCtx.erridx.ScanFrom(prefix)
 		if err != nil {
 			return err
@@ -519,7 +512,7 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 
 		dirEntry.Summary.UpdateAverages()
 
-		classifications := cf.Processor(dirPath).Directory(&dirEntry)
+		classifications := cf.Processor(dirPath).Directory(dirEntry)
 		for _, result := range classifications {
 			dirEntry.AddClassification(result.Analyzer, result.Classes)
 		}
@@ -544,12 +537,16 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 			rootSummary = dirEntry.Summary
 		}
 
-		if err := backupCtx.fileidx.Update(dirPath, dirEntry); err != nil {
+		if err := fileidx.Insert(dirPath, dirEntry); err != nil && err != btree.ErrExists {
+			return err
+		}
+
+		if err := backupCtx.recordEntry(dirEntry); err != nil {
 			return err
 		}
 	}
 
-	rootcsum, err := persistIndex(snap, backupCtx.fileidx, packfile.TYPE_VFS, func(entry vfs.Entry) (csum objects.Checksum, err error) {
+	rootcsum, err := persistIndex(snap, fileidx, packfile.TYPE_VFS, func(entry *vfs.Entry) (csum objects.Checksum, err error) {
 		serialized, err := entry.ToBytes()
 		if err != nil {
 			return

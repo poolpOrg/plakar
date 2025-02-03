@@ -1,0 +1,35 @@
+.Dd February 1, 2025
+.Dt PLAKAR-MOUNT 1
+.Os
+.Sh NAME
+.Nm plakar mount
+.Nd Mount a Plakar snapshot as a read-only filesystem
+.Sh SYNOPSIS
+.Nm
+.Ar mountpoint
+.Sh DESCRIPTION
+The
+.Nm
+command mounts a Plakar repository snapshot as a read-only filesystem
+at the specified
+.Ar mountpoint .
+This allows users to access snapshot contents as if they were part of
+the local file system, providing easy browsing and retrieval of files
+without needing to explicitly restore them.
+This command requires a Linux or Darwin (macOS) environment.
+.Sh EXAMPLES
+Mount a snapshot to the specified directory:
+.Bd -literal -offset indent
+plakar mount ~/mnt
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as an invalid mountpoint or failure during the
+mounting process.
+.El
+.Sh SEE ALSO
+.Xr plakar 1

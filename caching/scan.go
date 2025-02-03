@@ -11,9 +11,8 @@ import (
 
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/packfile"
-	"github.com/PlakarKorp/plakar/snapshot/importer"
 	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/vmihailenco/msgpack/v5"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 type ScanCache struct {
@@ -65,14 +64,20 @@ func (c *ScanCache) delete(prefix, key string) error {
 	return c.db.Delete([]byte(fmt.Sprintf("%s:%s", prefix, key)), nil)
 }
 
-// XXX - beware that pathname should be constructed to end with / for directories
-func (c *ScanCache) PutPathname(pathname string, data []byte) error {
-	return c.put("__pathname__", pathname, data)
+func (c *ScanCache) PutFile(file string, data []byte) error {
+	return c.put("__file__", file, data)
 }
 
-// XXX - beware that pathname should be constructed to end with / for directories
-func (c *ScanCache) GetPathname(pathname string) ([]byte, error) {
-	return c.get("__pathname__", pathname)
+func (c *ScanCache) GetFile(file string) ([]byte, error) {
+	return c.get("__file__", file)
+}
+
+func (c *ScanCache) PutDirectory(directory string, data []byte) error {
+	return c.put("__directory__", directory, data)
+}
+
+func (c *ScanCache) GetDirectory(directory string) ([]byte, error) {
+	return c.get("__directory__", directory)
 }
 
 func (c *ScanCache) PutChecksum(pathname string, checksum objects.Checksum) error {
@@ -131,7 +136,7 @@ func (c *ScanCache) GetState(stateID objects.Checksum) ([]byte, error) {
 	panic("GetState should never be used on the ScanCache backend")
 }
 
-func (c *ScanCache) GetStates() ([]objects.Checksum, error) {
+func (c *ScanCache) GetStates() (map[objects.Checksum][]byte, error) {
 	panic("GetStates should never be used on the ScanCache backend")
 }
 
@@ -215,77 +220,25 @@ func (c *ScanCache) GetDeltas() iter.Seq2[objects.Checksum, []byte] {
 	}
 }
 
-// / BELOW IS THE OLD CODE FROM BACKUP LAYER, NEEDS TO BE CLEANED UP
+func (c *ScanCache) EnumerateKeysWithPrefix(prefix string, reverse bool) iter.Seq2[string, []byte] {
+	l := len(prefix)
 
-func (c *ScanCache) EnumerateKeysWithPrefixReverse(prefix string, isDirectory bool) iter.Seq2[importer.ScanRecord, error] {
-	return func(yield func(importer.ScanRecord, error) bool) {
+	return func(yield func(string, []byte) bool) {
 		// Use LevelDB's iterator
-		iter := c.db.NewIterator(nil, nil)
+		iter := c.db.NewIterator(util.BytesPrefix([]byte(prefix)), nil)
 		defer iter.Release()
 
-		// Move to the last key and iterate backward
-		for iter.Last(); iter.Valid(); iter.Prev() {
+		if reverse {
+			iter.Last()
+		} else {
+			iter.First()
+		}
+
+		for iter.Valid() {
 			key := iter.Key()
 
 			// Check if the key starts with the given prefix
 			if !strings.HasPrefix(string(key), prefix) {
-				continue
-			}
-
-			if isDirectory {
-				if !strings.HasSuffix(string(key), "/") {
-					continue
-				}
-			} else {
-				if strings.HasSuffix(string(key), "/") {
-					continue
-				}
-			}
-
-			// Retrieve the value for the current key
-			value := iter.Value()
-
-			var record importer.ScanRecord
-			err := msgpack.Unmarshal(value, &record)
-			if !yield(record, err) {
-				return
-			}
-		}
-	}
-}
-
-func (c *ScanCache) EnumerateImmediateChildPathnames(directory string, reverse bool) iter.Seq2[importer.ScanRecord, error] {
-	// Ensure directory ends with a trailing slash for consistency
-	if !strings.HasSuffix(directory, "/") {
-		directory += "/"
-	}
-
-	// Start a goroutine to perform the iteration
-	return func(yield func(importer.ScanRecord, error) bool) {
-		iter := c.db.NewIterator(nil, nil)
-		defer iter.Release()
-
-		// Create the directory prefix to match keys
-		directoryKeyPrefix := "__pathname__:" + directory
-
-		if reverse {
-			// Reverse iteration: manually position to the last key within the prefix range
-			iter.Seek([]byte(directoryKeyPrefix)) // Start at the prefix
-			if iter.Valid() && strings.HasPrefix(string(iter.Key()), directoryKeyPrefix) {
-				// Move to the last key in the range
-				for iter.Next() && strings.HasPrefix(string(iter.Key()), directoryKeyPrefix) {
-				}
-				iter.Prev() // Step back to the last valid key
-			}
-		} else {
-			// Forward iteration: start at the beginning of the range
-			iter.Seek([]byte(directoryKeyPrefix))
-		}
-
-		for iter.Valid() {
-			key := string(iter.Key())
-			if key == directoryKeyPrefix {
-				// Skip the directory key itself
 				if reverse {
 					iter.Prev()
 				} else {
@@ -294,33 +247,10 @@ func (c *ScanCache) EnumerateImmediateChildPathnames(directory string, reverse b
 				continue
 			}
 
-			// Check if the key starts with the directory prefix
-			if strings.HasPrefix(key, directoryKeyPrefix) {
-				// Remove the prefix and the directory to isolate the remaining part of the path
-				remainingPath := key[len(directoryKeyPrefix):]
-
-				// Determine if this is an immediate child
-				slashCount := strings.Count(remainingPath, "/")
-
-				// Immediate child should either:
-				// - Have no slash (a file)
-				// - Have exactly one slash at the end (a directory)
-				if slashCount == 0 || (slashCount == 1 && strings.HasSuffix(remainingPath, "/")) {
-					// Retrieve the value for the current key
-					value := iter.Value()
-
-					var record importer.ScanRecord
-					err := msgpack.Unmarshal(value, &record)
-					if !yield(record, err) {
-						return
-					}
-				}
-			} else {
-				// Stop if the key is no longer within the expected prefix
-				break
+			if !yield(string(key)[l:], iter.Value()) {
+				return
 			}
 
-			// Advance or reverse the iterator
 			if reverse {
 				iter.Prev()
 			} else {

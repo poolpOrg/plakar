@@ -23,7 +23,6 @@ import (
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/repository"
 	"github.com/PlakarKorp/plakar/server/httpd"
-	"github.com/PlakarKorp/plakar/server/plakard"
 )
 
 func init() {
@@ -31,36 +30,19 @@ func init() {
 }
 
 func cmd_server(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
-	var opt_protocol string
+	var opt_listen string
 	var opt_allowdelete bool
 
 	flags := flag.NewFlagSet("server", flag.ExitOnError)
-	flags.StringVar(&opt_protocol, "protocol", "plakar", "protocol to use (http or plakar)")
+	flags.StringVar(&opt_listen, "listen", "127.0.0.1:9876", "address to listen on")
 	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "disable delete operations")
 	flags.Parse(args)
-
-	addr := ":9876"
-	if flags.NArg() == 1 {
-		addr = flags.Arg(0)
-	}
 
 	noDelete := true
 	if opt_allowdelete {
 		noDelete = false
 	}
 
-	switch opt_protocol {
-	case "http":
-		httpd.Server(repo, addr, noDelete)
-	case "plakar":
-		options := &plakard.ServerOptions{
-			NoOpen:   true,
-			NoCreate: true,
-			NoDelete: noDelete,
-		}
-		plakard.Server(ctx, repo, addr, options)
-	default:
-		ctx.GetLogger().Error("unsupported protocol: %s", opt_protocol)
-	}
+	httpd.Server(repo, opt_listen, noDelete)
 	return 0, nil
 }

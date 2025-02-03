@@ -27,6 +27,7 @@ import (
 	"github.com/PlakarKorp/plakar/caching"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/packfile"
+	"github.com/google/uuid"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -41,10 +42,10 @@ const (
 )
 
 type Metadata struct {
-	Version   uint32             `msgpack:"version"`
-	Timestamp time.Time          `msgpack:"timestamp"`
-	Aggregate bool               `msgpack:"aggregate"`
-	Extends   []objects.Checksum `msgpack:"extends"`
+	Version   uint32    `msgpack:"version"`
+	Timestamp time.Time `msgpack:"timestamp"`
+	Aggregate bool      `msgpack:"aggregate"`
+	Serial    uuid.UUID `msgpack:"serial"`
 }
 
 type Location struct {
@@ -93,7 +94,6 @@ func NewLocalState(cache caching.StateCache) *LocalState {
 			Version:   VERSION,
 			Timestamp: time.Now(),
 			Aggregate: false,
-			Extends:   []objects.Checksum{},
 		},
 		cache: cache,
 	}
@@ -107,6 +107,48 @@ func FromStream(rd io.Reader, cache caching.StateCache) (*LocalState, error) {
 	} else {
 		return st, nil
 	}
+}
+
+// Derive constructs a new state backed by *cache*, keeping the same serial as previous one.
+// Mainly used to construct Delta states when backing up.
+func (ls *LocalState) Derive(cache caching.StateCache) *LocalState {
+	st := NewLocalState(cache)
+	st.Metadata.Serial = ls.Metadata.Serial
+
+	return st
+}
+
+// Finds the latest (current) serial in the aggregate state, and if none sets
+// it to the provided one.
+func (ls *LocalState) UpdateSerialOr(serial uuid.UUID) error {
+	var latestID *objects.Checksum = nil
+	var latestMT *Metadata = nil
+
+	states, err := ls.cache.GetStates()
+	if err != nil {
+		return err
+	}
+
+	for stateID, buf := range states {
+		mt, err := MetadataFromBytes(buf)
+
+		if err != nil {
+			return err
+		}
+
+		if latestID == nil || latestMT.Timestamp.Before(mt.Timestamp) {
+			latestID = &stateID
+			latestMT = mt
+		}
+	}
+
+	if latestMT != nil {
+		ls.Metadata.Serial = latestMT.Serial
+	} else {
+		ls.Metadata.Serial = serial
+	}
+
+	return nil
 }
 
 /* Insert the state denotated by stateID and its associated delta entries read from rd */
@@ -182,13 +224,8 @@ func (ls *LocalState) SerializeToStream(w io.Writer) error {
 			return fmt.Errorf("failed to write aggregate flag: %w", err)
 		}
 	}
-	if err := writeUint64(uint64(len(ls.Metadata.Extends))); err != nil {
-		return fmt.Errorf("failed to write extends length: %w", err)
-	}
-	for _, checksum := range ls.Metadata.Extends {
-		if _, err := w.Write(checksum[:]); err != nil {
-			return fmt.Errorf("failed to write checksum: %w", err)
-		}
+	if _, err := w.Write(ls.Metadata.Serial[:]); err != nil {
+		return fmt.Errorf("failed to write serial flag: %w", err)
 	}
 
 	return nil
@@ -308,18 +345,11 @@ func (ls *LocalState) deserializeFromStream(r io.Reader) error {
 	}
 	ls.Metadata.Aggregate = aggregate[0] == 1
 
-	extendsLen, err := readUint64()
-	if err != nil {
-		return fmt.Errorf("failed to read extends length: %w", err)
+	serial := make([]byte, len(uuid.UUID{}))
+	if _, err := io.ReadFull(r, serial); err != nil {
+		return fmt.Errorf("failed to read serial: %w", err)
 	}
-	ls.Metadata.Extends = make([]objects.Checksum, extendsLen)
-	for i := uint64(0); i < extendsLen; i++ {
-		var checksum objects.Checksum
-		if _, err := io.ReadFull(r, checksum[:]); err != nil {
-			return fmt.Errorf("failed to read checksum: %w", err)
-		}
-		ls.Metadata.Extends[i] = checksum
-	}
+	ls.Metadata.Serial = uuid.UUID(serial)
 
 	return nil
 }

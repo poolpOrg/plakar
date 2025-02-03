@@ -1,0 +1,55 @@
+.Dd November 12, 2024
+.Dt PLAKAR-UI 1
+.Os
+.Sh NAME
+.Nm plakar ui
+.Nd Serve the Plakar user interface over HTTP
+.Sh SYNOPSIS
+.Nm
+.Op Fl addr Ar address
+.Op Fl cors
+.Op Fl no-auth
+.Op Fl no-spawn
+.Sh DESCRIPTION
+The
+.Nm
+command serves the Plakar webapp user interface.
+By default, this command spawns the a web browser to browse the
+interface.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl addr Ar address
+Specify the address and port for the UI to listen on separated by a colon,
+.Pq e.g. localhost:8080 .
+If omitted,
+.Nm
+listen on localhost on a random port.
+.It Fl cors
+Set the
+.Sq Access-Control-Allow-Origin
+HTTP headers to allow the UI to be accesses from any origin.
+.It Fl no-auth
+Disable the authentication token that otherwise is needed to consume
+the exposed HTTP APIs.
+.It Fl no-spawn
+Do not automatically spawn a web browser.
+The UI will launch, but the user must manually open it by navigating
+to the specified address.
+.El
+.Sh EXAMPLES
+Using a custom address and disable automatic browser execution:
+.Bd -literal -offset indent
+plakar ui -addr localhost:9090 -no-spawn
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+A general error occurred, such as an inability to launch the UI or
+bind to the specified address.
+.El
+.Sh SEE ALSO
+.Xr plakar 1

@@ -1,0 +1,62 @@
+.Dd February 1, 2025
+.Dt PLAKAR-SYNC 1
+.Os
+.Sh NAME
+.Nm plakar sync
+.Nd Synchronize snapshots between Plakar repositories
+.Sh SYNOPSIS
+.Nm
+.Op Ar snapshotID
+.Cm to | from | with
+.Ar repository
+.Sh DESCRIPTION
+The
+.Nm
+command syncronize snapshots between two Plakar repositories.
+If a specific snapshot ID is provided, only snapshots with matching
+IDs will be synchronized.
+.Pp
+The arguments are as follows:
+.Bl -tag -width Ds
+.It Cm to | from | with
+Specifies the direction of synchronization:
+.Bl -tag -width Ds
+.It Cm to
+Synchronize snapshots from the local repository to the specified peer
+repository.
+.It Cm from
+Synchronize snapshots from the specified peer repository to the local
+repository.
+.It Cm with
+Synchronize snapshots in both directions, ensuring both repositories
+are fully synchronized.
+.El
+.It Ar repository
+Path to the peer repository to synchronize with.
+.El
+.Sh EXAMPLES
+Basic synchronization from local to peer repository:
+.Bd -literal -offset indent
+plakar sync to /path/to/peer/repo
+.Ed
+.Pp
+Synchronize specific snapshot to peer repository:
+.Bd -literal -offset indent
+plakar sync abc123 to /path/to/peer/repo
+.Ed
+.Pp
+Bi-directional synchronization with peer repository:
+.Bd -literal -offset indent
+plakar sync with /path/to/peer/repo
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+General failure occurred, such as an invalid repository path, snapshot
+ID mismatch, or network error.
+.El
+.Sh SEE ALSO
+.Xr plakar 1

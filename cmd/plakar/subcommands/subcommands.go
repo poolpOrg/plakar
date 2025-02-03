@@ -17,21 +17,23 @@ func Register(command string, fn func(*appcontext.AppContext, *repository.Reposi
 }
 
 func Execute(ctx *appcontext.AppContext, repo *repository.Repository, command string, args []string, agentless bool) (int, error) {
-	if agentless {
-		fn, exists := subcommands[command]
-		if !exists {
-			return 1, fmt.Errorf("unknown command: %s", command)
+	if !agentless {
+		client, err := agent.NewClient(filepath.Join(ctx.CacheDir, "agent.sock"))
+		if err != nil {
+			ctx.GetLogger().Warn("failed to connect to agent, falling back to -no-agent: %v", err)
+			if err := repo.RebuildState(); err != nil {
+				return 1, fmt.Errorf("failed to rebuild state: %v", err)
+			}
+		} else {
+			defer client.Close()
+			return client.SendCommand(ctx, repo.Location(), command, args)
 		}
-		return fn(ctx, repo, args)
 	}
-
-	client, err := agent.NewClient(filepath.Join(ctx.CacheDir, "agent.sock"))
-	if err != nil {
-		return 1, err
+	fn, exists := subcommands[command]
+	if !exists {
+		return 1, fmt.Errorf("unknown command: %s", command)
 	}
-	defer client.Close()
-
-	return client.SendCommand(ctx, repo.Location(), command, args)
+	return fn(ctx, repo, args)
 }
 
 func List() []string {

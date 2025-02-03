@@ -28,11 +28,11 @@ func init() {
 	subcommands.Register("mount", cmd_mount)
 }
 
-func cmd_mount(ctx *appcontext.AppContext, repo *repository.Repository, args []string) int {
+func cmd_mount(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
 	flags := flag.NewFlagSet("mount", flag.ExitOnError)
 	flags.Parse(args)
 
 	ctx.GetLogger().Warn("%s not supported on %s",
-		flags.Arg(0), ctx.GetOperatingSystem())
-	return 1
+		flags.Arg(0), ctx.OperatingSystem)
+	return 1, nil
 }

@@ -21,12 +21,9 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"log"
-	"net"
 	"net/url"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/PlakarKorp/plakar/network"
 	"github.com/PlakarKorp/plakar/objects"
@@ -69,121 +66,14 @@ func (repo *Repository) Location() string {
 func (repository *Repository) connect(location *url.URL) error {
 	scheme := location.Scheme
 	switch scheme {
-	case "tcp":
-		err := repository.connectTCP(location)
-		if err != nil {
-			return err
-		}
 	case "ssh":
 		err := repository.connectSSH(location)
-		if err != nil {
-			return err
-		}
-	case "stdio":
-		err := repository.connectStdio()
 		if err != nil {
 			return err
 		}
 	default:
 		return fmt.Errorf("unsupported protocol: %s", scheme)
 	}
-
-	return nil
-}
-
-func (repository *Repository) connectTCP(location *url.URL) error {
-	port := location.Port()
-	if port == "" {
-		port = "9876"
-	}
-
-	tcpAddr, err := net.ResolveTCPAddr("tcp", location.Hostname()+":"+port)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	conn, err := net.DialTCP("tcp", nil, tcpAddr)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	repository.encoder = gob.NewEncoder(conn)
-	repository.decoder = gob.NewDecoder(conn)
-
-	repository.inflightRequests = make(map[uuid.UUID]chan network.Request)
-	repository.notifications = make(chan network.Request)
-
-	//repository.maxConcurrentRequest = make(chan bool, 1024)
-
-	go func() {
-		for m := range repository.notifications {
-			repository.mu.Lock()
-			notify := repository.inflightRequests[m.Uuid]
-			repository.mu.Unlock()
-			notify <- m
-		}
-	}()
-
-	go func() {
-		for {
-			result := network.Request{}
-			err = repository.decoder.Decode(&result)
-			if err != nil {
-				conn.Close()
-				return
-			}
-			repository.notifications <- result
-		}
-	}()
-
-	return err
-}
-
-func (repository *Repository) connectStdio() error {
-	subProcess := exec.Command("plakar", "stdio")
-
-	stdin, err := subProcess.StdinPipe()
-	if err != nil {
-		return err
-	}
-
-	stdout, err := subProcess.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	subProcess.Stderr = os.Stderr
-
-	repository.encoder = gob.NewEncoder(stdin)
-	repository.decoder = gob.NewDecoder(stdout)
-
-	if err = subProcess.Start(); err != nil {
-		return err
-	}
-
-	repository.inflightRequests = make(map[uuid.UUID]chan network.Request)
-	repository.notifications = make(chan network.Request)
-
-	go func() {
-		for m := range repository.notifications {
-			repository.mu.Lock()
-			notify := repository.inflightRequests[m.Uuid]
-			repository.mu.Unlock()
-			notify <- m
-		}
-	}()
-
-	go func() {
-		for {
-			result := network.Request{}
-			err = repository.decoder.Decode(&result)
-			if err != nil {
-				stdin.Close()
-				subProcess.Wait()
-				return
-			}
-			repository.notifications <- result
-		}
-	}()
 
 	return nil
 }
@@ -280,19 +170,9 @@ func (repository *Repository) sendRequest(Type string, Payload interface{}) (*ne
 }
 
 func (repository *Repository) Create(location string, config storage.Configuration) error {
-	isTcp := false
-	if strings.HasPrefix(location, "tcp://") {
-		isTcp = true
-		location = "ssh://" + location[6:]
-	}
-
 	parsed, err := giturls.Parse(location)
 	if err != nil {
 		return err
-	}
-
-	if isTcp {
-		parsed.Scheme = "tcp"
 	}
 
 	err = repository.connect(parsed)
@@ -317,20 +197,9 @@ func (repository *Repository) Create(location string, config storage.Configurati
 }
 
 func (repository *Repository) Open(location string) error {
-
-	isTcp := false
-	if strings.HasPrefix(location, "tcp://") {
-		isTcp = true
-		location = "ssh://" + location[6:]
-	}
-
 	parsed, err := giturls.Parse(location)
 	if err != nil {
 		return err
-	}
-
-	if isTcp {
-		parsed.Scheme = "tcp"
 	}
 
 	err = repository.connect(parsed)
@@ -380,9 +249,7 @@ func (repository *Repository) GetStates() ([]objects.Checksum, error) {
 	}
 
 	ret := make([]objects.Checksum, len(result.Payload.(network.ResGetStates).Checksums))
-	for i, checksum := range result.Payload.(network.ResGetStates).Checksums {
-		ret[i] = checksum
-	}
+	copy(ret, result.Payload.(network.ResGetStates).Checksums)
 	return ret, nil
 }
 
@@ -445,9 +312,7 @@ func (repository *Repository) GetPackfiles() ([]objects.Checksum, error) {
 	}
 
 	ret := make([]objects.Checksum, len(result.Payload.(network.ResGetPackfiles).Checksums))
-	for i, checksum := range result.Payload.(network.ResGetPackfiles).Checksums {
-		ret[i] = checksum
-	}
+	copy(ret, result.Payload.(network.ResGetPackfiles).Checksums)
 	return ret, nil
 }
 

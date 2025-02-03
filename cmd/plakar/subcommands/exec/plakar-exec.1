@@ -1,0 +1,35 @@
+.Dd January 29, 2025
+.Dt PLAKAR-EXEC 1
+.Os
+.Sh NAME
+.Nm plakar exec
+.Nd Execute a file from a Plakar snapshot
+.Sh SYNOPSIS
+.Nm
+.Ar snapshotID : Ns Ar filepath
+.Op Ar command_args ...
+.Sh DESCRIPTION
+The
+.Nm
+command extracts and executes a file at
+.Ar filepath
+from a Plakar snapshot passing the given arguments
+.Ar command_args
+to it.
+.Sh EXAMPLES
+Execute a script from a snapshot with no arguments:
+.Bd -literal -offset indent
+plakar exec abc123:/path/to/script.sh
+.Ed
+.Pp
+Run an executable from a snapshot with arguments:
+.Bd -literal -offset indent
+plakar exec abc123:/path/to/executable --option value
+.Ed
+.Sh DIAGNOSTICS
+.Nm
+preserves the exit code of the command but may also fail with exit
+code 1 without executing it, for e.g. if the file or the snapshot
+doesn't exist.
+.Sh SEE ALSO
+.Xr plakar 1

@@ -76,8 +76,8 @@ func (c *_RepositoryCache) DelState(stateID objects.Checksum) error {
 	return c.delete("__state__", fmt.Sprintf("%x", stateID))
 }
 
-func (c *_RepositoryCache) GetStates() ([]objects.Checksum, error) {
-	ret := make([]objects.Checksum, 0)
+func (c *_RepositoryCache) GetStates() (map[objects.Checksum][]byte, error) {
+	ret := make(map[objects.Checksum][]byte, 0)
 	iter := c.db.NewIterator(nil, nil)
 	defer iter.Release()
 
@@ -93,7 +93,7 @@ func (c *_RepositoryCache) GetStates() ([]objects.Checksum, error) {
 			fmt.Printf("Error decoding state ID: %v\n", err)
 			return nil, err
 		}
-		ret = append(ret, stateID)
+		ret[stateID] = iter.Value()
 	}
 
 	return ret, nil

@@ -57,6 +57,8 @@ func cmd_create(ctx *appcontext.AppContext, _ *repository.Repository, args []str
 	storageConfiguration.Hashing = *hashingConfiguration
 
 	if !opt_noencryption {
+		storageConfiguration.Encryption.Algorithm = encryption.DefaultConfiguration().Algorithm
+
 		var passphrase []byte
 
 		envPassphrase := os.Getenv("PLAKAR_PASSPHRASE")
@@ -78,13 +80,26 @@ func cmd_create(ctx *appcontext.AppContext, _ *repository.Repository, args []str
 			passphrase = []byte(ctx.KeyFromFile)
 		}
 
-		encryptionKey, err := encryption.BuildSecretFromPassphrase(passphrase)
+		if len(passphrase) == 0 {
+			return 1, fmt.Errorf("can't encrypt the repository with an empty passphrase")
+		}
+
+		salt, err := encryption.Salt()
+		if err != nil {
+			return 1, err
+		}
+		storageConfiguration.Encryption.KDFParams.Salt = salt
+
+		key, err := encryption.DeriveKey(storageConfiguration.Encryption.KDFParams, passphrase)
 		if err != nil {
 			return 1, err
 		}
 
-		storageConfiguration.Encryption.Algorithm = encryption.DefaultConfiguration().Algorithm
-		storageConfiguration.Encryption.Key = encryptionKey
+		canary, err := encryption.DeriveCanary(key)
+		if err != nil {
+			return 1, err
+		}
+		storageConfiguration.Encryption.Canary = canary
 	} else {
 		storageConfiguration.Encryption = nil
 	}

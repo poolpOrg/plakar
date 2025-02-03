@@ -1,0 +1,61 @@
+.Dd January 29, 2025
+.Dt PLAKAR CHECK 1
+.Os
+.Sh NAME
+.Nm plakar check
+.Nd Check data integrity in a Plakar repository or snapshot
+.Sh SYNOPSIS
+.Nm
+.Op Fl concurrency Ar number
+.Op Fl fast
+.Op Fl no-verify
+.Op Fl quiet
+.Op Ar snapshotID : Ns Ar path ...
+.Sh DESCRIPTION
+The
+.Nm
+command verifies the integrity of data in a Plakar repository.
+It checks the given paths inside the snapshots for consistency and
+validates file checksums to ensure no corruption has occurred, or all
+the data in the repository if no
+.Ar snapshotID
+is given.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl concurrency Ar number
+Set the maximum number of parallel tasks for faster processing.
+Defaults to
+.Dv 8 * CPU count + 1 .
+.It Fl fast
+Enable a faster check that skips checksum verification.
+This option performs only structural validation without confirming
+data integrity.
+.It Fl no-verify
+Disable signature verification.
+This option allows to proceed with checking snapshot integrity
+regardless of an invalid snapshot signature.
+.It Fl quiet
+Suppress output to standard output, only logging errors and warnings.
+.El
+.Sh EXAMPLES
+Perform a full integrity check on all snapshots:
+.Bd -literal -offset indent
+plakar check
+.Ed
+.Pp
+Perform a fast check on specific paths of two snapshot:
+.Bd -literal -offset indent
+plakar check -fast abc123:/etc/passwd def456:/var/www
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully with no integrity issues found.
+.It >0
+An error occurred, such as corruption detected in a snapshot or
+failure to check data integrity.
+.El
+.Sh SEE ALSO
+.Xr plakar 1

@@ -68,7 +68,7 @@ func New(repo *repository.Repository) (*Snapshot, error) {
 		packerChanDone: make(chan bool),
 	}
 
-	snap.deltaState = state.NewLocalState(scanCache)
+	snap.deltaState = repo.NewStateDelta(scanCache)
 
 	if snap.AppContext().Identity != uuid.Nil {
 		snap.Header.Identity.Identifier = snap.AppContext().Identity
@@ -255,12 +255,6 @@ func (snap *Snapshot) ListObjects() (iter.Seq2[objects.Checksum, error], error) 
 			}
 		}
 	}, nil
-}
-
-func (snap *Snapshot) ListDatas() iter.Seq2[objects.Checksum, error] {
-	return func(yield func(objects.Checksum, error) bool) {
-		yield(snap.Header.Metadata, nil)
-	}
 }
 
 func (snap *Snapshot) Logger() *logging.Logger {
