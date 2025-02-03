@@ -31,8 +31,10 @@ type Entry struct {
 	Summary *Summary `msgpack:"summary" json:"summary,omitempty"`
 
 	/* File specific fields */
-	SymlinkTarget string          `msgpack:"symlinkTarget,omitempty" json:"symlink_target,omitempty"`
-	Object        *objects.Object `msgpack:"object,omitempty" json:"object,omitempty"` // nil for !regular files
+	SymlinkTarget string `msgpack:"symlinkTarget,omitempty" json:"symlink_target,omitempty"`
+
+	// should this be embedded or should it be an object.Checksum
+	Object *objects.Object `msgpack:"object,omitempty" json:"object,omitempty"` // nil for !regular files
 
 	/* Windows specific fields */
 	AlternateDataStreams []AlternateDataStream `msgpack:"alternate_data_streams,omitempty" json:"alternate_data_streams"`
