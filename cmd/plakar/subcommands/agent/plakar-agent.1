@@ -1,0 +1,38 @@
+.Dd February 1, 2025
+.Dt PLAKAR-AGENT 1
+.Os
+.Sh NAME
+.Nm plakar agent
+.Nd Run the Plakar agent
+.Sh SYNOPSIS
+.Nm
+.Op Fl prometheus Ar address
+.Sh DESCRIPTION
+The
+.Nm
+command starts the Plakar agent which will execute subsequent
+.Xr plakar
+commands on their behalfs for faster processing.
+.Nm
+continues running indefinitely.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl prometheus Ar address
+Expose a prometheus server at
+.Ar address .
+Metrics are available at the
+.Pa /metrics
+endpoint.
+.El
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as invalid parameters, inability to create the
+repository, or configuration issues.
+.El
+.Sh SEE ALSO
+.Xr plakar 1

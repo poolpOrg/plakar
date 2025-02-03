@@ -20,7 +20,21 @@ import (
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"go.omarpolo.com/ttlmap"
 )
+
+type downloadSignedUrl struct {
+	snapshotID [32]byte
+	rebase     bool
+	files      []string
+}
+
+var downloadSignedUrls = ttlmap.New[string, downloadSignedUrl](1 * time.Hour)
+
+func init() {
+	downloadSignedUrls.AutoExpire()
+}
 
 func snapshotHeader(w http.ResponseWriter, r *http.Request) error {
 	snapshotID32, err := PathParamToID(r, "snapshot")
@@ -191,7 +205,7 @@ func (signer SnapshotReaderURLSigner) VerifyMiddleware(next http.Handler) http.H
 
 		snapshotID32, path, err := SnapshotPathParam(r, lrepository, "snapshot_path")
 		if err != nil {
-			handleError(w, parameterError("snapshot_path", InvalidArgument, err))
+			handleError(w, r, parameterError("snapshot_path", InvalidArgument, err))
 			return
 		}
 		snapshotId := fmt.Sprintf("%0x", snapshotID32[:])
@@ -205,24 +219,24 @@ func (signer SnapshotReaderURLSigner) VerifyMiddleware(next http.Handler) http.H
 
 		if err != nil {
 			if errors.Is(err, jwt.ErrTokenExpired) {
-				handleError(w, authError("token expired"))
+				handleError(w, r, authError("token expired"))
 				return
 			}
-			handleError(w, authError(fmt.Sprintf("unable to parse JWT token: %v", err)))
+			handleError(w, r, authError(fmt.Sprintf("unable to parse JWT token: %v", err)))
 			return
 		}
 
 		if claims, ok := jwtToken.Claims.(*SnapshotSignedURLClaims); ok {
 			if claims.Path != path {
-				handleError(w, authError("invalid URL path"))
+				handleError(w, r, authError("invalid URL path"))
 				return
 			}
 			if claims.SnapshotID != snapshotId {
-				handleError(w, authError("invalid URL snapshot"))
+				handleError(w, r, authError("invalid URL snapshot"))
 				return
 			}
 		} else {
-			handleError(w, authError("invalid URL signature"))
+			handleError(w, r, authError("invalid URL signature"))
 			return
 		}
 
@@ -444,4 +458,98 @@ func snapshotSearch(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return json.NewEncoder(w).Encode(items)
+}
+
+type DownloadItem struct {
+	Pathname string `json:"pathname"`
+}
+type DownloadQuery struct {
+	Name   string         `json:"name"`
+	Items  []DownloadItem `json:"items"`
+	Rebase bool           `json:"rebase,omitempty"`
+}
+
+func snapshotVFSDownloader(w http.ResponseWriter, r *http.Request) error {
+	snapshotID32, _, err := SnapshotPathParam(r, lrepository, "snapshot_path")
+	if err != nil {
+		return err
+	}
+
+	var query DownloadQuery
+	if err := json.NewDecoder(r.Body).Decode(&query); err != nil {
+		return parameterError("BODY", InvalidArgument, err)
+	}
+
+	if _, err = snapshot.Load(lrepository, snapshotID32); err != nil {
+		return nil
+	}
+
+	for {
+		id := uuid.New().String()
+		if _, ok := downloadSignedUrls.Get(id); ok {
+			continue
+		}
+
+		url := downloadSignedUrl{
+			snapshotID: snapshotID32,
+			rebase:     query.Rebase,
+		}
+
+		for _, item := range query.Items {
+			url.files = append(url.files, item.Pathname)
+		}
+
+		downloadSignedUrls.Add(id, url)
+		res := struct {
+			Id string `json:"id"`
+		}{id}
+
+		json.NewEncoder(w).Encode(&res)
+		return nil
+	}
+}
+
+func snapshotVFSDownloaderSigned(w http.ResponseWriter, r *http.Request) error {
+	id := r.PathValue("id")
+
+	link, ok := downloadSignedUrls.Get(id)
+	if !ok {
+		return &ApiError{
+			HttpCode: 404,
+			ErrCode:  "signed-link-not-found",
+			Message:  "Signed Link Not Found",
+		}
+	}
+
+	snap, err := snapshot.Load(lrepository, link.snapshotID)
+	if err != nil {
+		return err
+	}
+
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		name = fmt.Sprintf("snapshot-%x-%s", link.snapshotID[:4], time.Now().Format("2006-01-02-15-04-05"))
+	}
+
+	format := r.URL.Query().Get("format")
+	var mime string
+	switch format {
+	case snapshot.ArchiveTar:
+		mime = "application/x-tar"
+	case snapshot.ArchiveTarball:
+		mime = "application/x-gzip"
+	case snapshot.ArchiveZip:
+		mime = "application/zip"
+	default:
+		return &ApiError{
+			HttpCode: 400,
+			ErrCode: "unknown-archive-format",
+			Message: "Unknown Archive Format",
+		}
+	}
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", name))
+	w.Header().Set("Content-Type", mime)
+
+	return snap.Archive(w, format, link.files, link.rebase)
 }

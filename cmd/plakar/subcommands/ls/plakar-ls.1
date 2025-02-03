@@ -1,0 +1,67 @@
+.Dd February 1, 2025
+.Dt PLAKAR-LS 1
+.Os
+.Sh NAME
+.Nm plakar ls
+.Nd List snapshots and their contents in a Plakar repository
+.Sh SYNOPSIS
+.Nm
+.Op Fl uuid
+.Op Fl tag Ar tag
+.Op Fl recursive
+.Op Ar snapshotID : Ns Ar path
+.Sh DESCRIPTION
+The
+.Nm
+command lists snapshots stored in a Plakar repository, and optionally
+displays the contents of
+.Ar path
+in a specified snapshot.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl uuid
+Display the full UUID for each snapshot instead of the shorter
+snapshot ID.
+.It Fl tag Ar tag
+Filter snapshots by the specified tag, listing only those that contain
+the given tag.
+.It Fl recursive
+List directory contents recursively when exploring snapshot contents.
+.El
+.Sh EXAMPLES
+List all snapshots with their short IDs:
+.Bd -literal -offset indent
+plakar ls
+.Ed
+.Pp
+List all snapshots with UUIDs instead of short IDs:
+.Bd -literal -offset indent
+plakar ls -uuid
+.Ed
+.Pp
+List snapshots with a specific tag:
+.Bd -literal -offset indent
+plakar ls -tag "backup"
+.Ed
+.Pp
+List contents of a specific snapshot:
+.Bd -literal -offset indent
+plakar ls abc123
+.Ed
+.Pp
+Recursively list contents of a specific snapshot:
+.Bd -literal -offset indent
+plakar ls -recursive abc123:/etc
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as failure to retrieve snapshot information or
+invalid snapshot ID.
+.El
+.Sh SEE ALSO
+.Xr plakar 1

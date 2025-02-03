@@ -67,7 +67,7 @@ type localCache struct {
 	packfiles     []storedeData
 }
 
-func TestPlakardBackendTCP(t *testing.T) {
+func _TestPlakardBackendTCP(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

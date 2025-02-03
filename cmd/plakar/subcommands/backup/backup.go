@@ -57,13 +57,11 @@ func cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []
 	var opt_exclude excludeFlags
 	var opt_concurrency uint64
 	var opt_quiet bool
-	var opt_identity string
 	var opt_stdio bool
 
 	excludes := []glob.Glob{}
 	flags := flag.NewFlagSet("backup", flag.ExitOnError)
 	flags.Uint64Var(&opt_concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
-	flags.StringVar(&opt_identity, "identity", "", "use identity from keyring")
 	flags.StringVar(&opt_tags, "tag", "", "tag to assign to this snapshot")
 	flags.StringVar(&opt_excludes, "excludes", "", "file containing a list of exclusions")
 	flags.Var(&opt_exclude, "exclude", "file containing a list of exclusions")

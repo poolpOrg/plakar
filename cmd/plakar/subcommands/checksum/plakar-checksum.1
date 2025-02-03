@@ -1,0 +1,54 @@
+.Dd January 28, 2025
+.Dt PLAKAR-CHECKSUM 1
+.Os
+.Sh NAME
+.Nm plakar checksum
+.Nd Calculate checksums for files in a Plakar snapshot
+.Sh SYNOPSIS
+.Nm
+.Op Fl fast
+.Ar snapshotID Ns No : Ns Ar filepath Op ...
+.Sh DESCRIPTION
+The
+.Nm
+command calculates and displays checksums for specified
+.Ar filepath
+in a the given
+.Ar snapshotID .
+Multiple
+.Ar snapshotID
+and
+.Ar filepath
+may be given.
+By default, the command computes the checksum by reading the file
+contents.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl fast
+Return the pre-recorded checksum for the file without re-computing it
+from the file contents.
+It's faster, but it does not verify the integrity against the current
+contents.
+.El
+.Sh EXAMPLES
+Calculate the checksum of a file within a snapshot:
+.Bd -literal -offset indent
+plakar checksum abc123:/path/to/file.txt
+.Ed
+.Pp
+Retrieve the pre-recorded checksum for faster output:
+.Bd -literal -offset indent
+plakar checksum -fast abc123:/path/to/file.txt
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as failure to retrieve a file checksum or
+invalid snapshot ID.
+.El
+.Sh SEE ALSO
+.Xr plakar 1

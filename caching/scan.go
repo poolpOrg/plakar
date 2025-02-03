@@ -136,7 +136,7 @@ func (c *ScanCache) GetState(stateID objects.Checksum) ([]byte, error) {
 	panic("GetState should never be used on the ScanCache backend")
 }
 
-func (c *ScanCache) GetStates() ([]objects.Checksum, error) {
+func (c *ScanCache) GetStates() (map[objects.Checksum][]byte, error) {
 	panic("GetStates should never be used on the ScanCache backend")
 }
 

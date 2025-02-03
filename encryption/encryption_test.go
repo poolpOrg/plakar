@@ -9,13 +9,38 @@ import (
 	"github.com/PlakarKorp/plakar/compression"
 )
 
-func TestEncryptDecryptStream(t *testing.T) {
-	passphrase := []byte("strong passphrase")
-	secret, err := BuildSecretFromPassphrase(passphrase)
+func TestDeriveKey(t *testing.T) {
+	config := DefaultConfiguration()
+
+	salt, err := Salt()
 	if err != nil {
-		t.Fatalf("Failed to build secret from passphrase: %v", err)
+		t.Fatalf("Failed to generate random salt: %v", err)
 	}
-	derivedKey, err := DeriveSecret(passphrase, secret)
+	config.KDFParams.Salt = salt
+
+	passphrase := []byte("strong passphrase")
+	key, err := DeriveKey(config.KDFParams, passphrase)
+	if err != nil {
+		t.Fatalf("Failed to derive key from passphrase: %v", err)
+	}
+
+	// Verify that derived key is non-nil and of expected length
+	if key == nil || len(key) != 32 {
+		t.Errorf("Unexpected derived key length. Got %d, want 32", len(key))
+	}
+}
+
+func TestEncryptDecryptStream(t *testing.T) {
+	config := DefaultConfiguration()
+
+	salt, err := Salt()
+	if err != nil {
+		t.Fatalf("Failed to generate random salt: %v", err)
+	}
+	config.KDFParams.Salt = salt
+
+	passphrase := []byte("strong passphrase")
+	key, err := DeriveKey(config.KDFParams, passphrase)
 	if err != nil {
 		t.Fatalf("Failed to derive key from passphrase: %v", err)
 	}
@@ -25,13 +50,13 @@ func TestEncryptDecryptStream(t *testing.T) {
 	r := strings.NewReader(originalData)
 
 	// Encrypt the data
-	encryptedReader, err := EncryptStream(derivedKey, r)
+	encryptedReader, err := EncryptStream(key, r)
 	if err != nil {
 		t.Fatalf("Failed to encrypt data: %v", err)
 	}
 
 	// Decrypt the data
-	decryptedReader, err := DecryptStream(derivedKey, encryptedReader)
+	decryptedReader, err := DecryptStream(key, encryptedReader)
 	if err != nil {
 		t.Fatalf("Failed to decrypt data: %v", err)
 	}
@@ -49,12 +74,17 @@ func TestEncryptDecryptStream(t *testing.T) {
 }
 
 func TestEncryptDecryptEmptyStream(t *testing.T) {
-	passphrase := []byte("strong passphrase")
-	secret, err := BuildSecretFromPassphrase(passphrase)
+
+	config := DefaultConfiguration()
+
+	salt, err := Salt()
 	if err != nil {
-		t.Fatalf("Failed to build secret from passphrase: %v", err)
+		t.Fatalf("Failed to generate random salt: %v", err)
 	}
-	derivedKey, err := DeriveSecret(passphrase, secret)
+	config.KDFParams.Salt = salt
+
+	passphrase := []byte("strong passphrase")
+	key, err := DeriveKey(config.KDFParams, passphrase)
 	if err != nil {
 		t.Fatalf("Failed to derive key from passphrase: %v", err)
 	}
@@ -64,13 +94,13 @@ func TestEncryptDecryptEmptyStream(t *testing.T) {
 	r := strings.NewReader(originalData)
 
 	// Encrypt the data
-	encryptedReader, err := EncryptStream(derivedKey, r)
+	encryptedReader, err := EncryptStream(key, r)
 	if err != nil {
 		t.Fatalf("Failed to encrypt data: %v", err)
 	}
 
 	// Decrypt the data
-	decryptedReader, err := DecryptStream(derivedKey, encryptedReader)
+	decryptedReader, err := DecryptStream(key, encryptedReader)
 	if err != nil {
 		t.Fatalf("Failed to decrypt data: %v", err)
 	}
@@ -88,12 +118,16 @@ func TestEncryptDecryptEmptyStream(t *testing.T) {
 }
 
 func TestEncryptDecryptStreamWithIncorrectKey(t *testing.T) {
-	passphrase := []byte("secure passphrase")
-	secret, err := BuildSecretFromPassphrase(passphrase)
+	config := DefaultConfiguration()
+
+	salt, err := Salt()
 	if err != nil {
-		t.Fatalf("Failed to build secret from passphrase: %v", err)
+		t.Fatalf("Failed to generate random salt: %v", err)
 	}
-	derivedKey, err := DeriveSecret(passphrase, secret)
+	config.KDFParams.Salt = salt
+
+	passphrase := []byte("strong passphrase")
+	key, err := DeriveKey(config.KDFParams, passphrase)
 	if err != nil {
 		t.Fatalf("Failed to derive key from passphrase: %v", err)
 	}
@@ -103,13 +137,13 @@ func TestEncryptDecryptStreamWithIncorrectKey(t *testing.T) {
 	r := strings.NewReader(originalData)
 
 	// Encrypt the data
-	encryptedReader, err := EncryptStream(derivedKey, r)
+	encryptedReader, err := EncryptStream(key, r)
 	if err != nil {
 		t.Fatalf("Failed to encrypt data: %v", err)
 	}
 
 	// Generate an incorrect key for decryption
-	incorrectKey := make([]byte, len(derivedKey))
+	incorrectKey := make([]byte, len(key))
 	if _, err := rand.Read(incorrectKey); err != nil {
 		t.Fatalf("Failed to generate incorrect decryption key: %v", err)
 	}
@@ -126,38 +160,17 @@ func TestEncryptDecryptStreamWithIncorrectKey(t *testing.T) {
 	}
 }
 
-func TestBuildSecretFromPassphraseAndDeriveSecret(t *testing.T) {
-	passphrase := []byte("another strong passphrase")
-	secret, err := BuildSecretFromPassphrase(passphrase)
-	if err != nil {
-		t.Fatalf("Failed to build secret from passphrase: %v", err)
-	}
-
-	// Derive the key with the correct passphrase
-	derivedKey, err := DeriveSecret(passphrase, secret)
-	if err != nil {
-		t.Fatalf("Failed to derive secret: %v", err)
-	}
-
-	// Verify that derived key is non-nil and of expected length
-	if derivedKey == nil || len(derivedKey) != 32 {
-		t.Errorf("Unexpected derived key length. Got %d, want 32", len(derivedKey))
-	}
-
-	// Attempt to derive with an incorrect passphrase, expecting an error
-	_, err = DeriveSecret([]byte("wrong passphrase"), secret)
-	if err == nil {
-		t.Fatal("Expected error for incorrect passphrase, but got none")
-	}
-}
-
 func TestCompressEncryptThenDecryptDecompressStream(t *testing.T) {
-	passphrase := []byte("strong passphrase")
-	secret, err := BuildSecretFromPassphrase(passphrase)
+	config := DefaultConfiguration()
+
+	salt, err := Salt()
 	if err != nil {
-		t.Fatalf("Failed to build secret from passphrase: %v", err)
+		t.Fatalf("Failed to generate random salt: %v", err)
 	}
-	derivedKey, err := DeriveSecret(passphrase, secret)
+	config.KDFParams.Salt = salt
+
+	passphrase := []byte("strong passphrase")
+	key, err := DeriveKey(config.KDFParams, passphrase)
 	if err != nil {
 		t.Fatalf("Failed to derive key from passphrase: %v", err)
 	}
@@ -173,13 +186,13 @@ func TestCompressEncryptThenDecryptDecompressStream(t *testing.T) {
 	}
 
 	// Step 2: Encrypt the compressed data
-	encryptedReader, err := EncryptStream(derivedKey, compressedReader)
+	encryptedReader, err := EncryptStream(key, compressedReader)
 	if err != nil {
 		t.Fatalf("Failed to encrypt data: %v", err)
 	}
 
 	// Step 3: Decrypt the data
-	decryptedReader, err := DecryptStream(derivedKey, encryptedReader)
+	decryptedReader, err := DecryptStream(key, encryptedReader)
 	if err != nil {
 		t.Fatalf("Failed to decrypt data: %v", err)
 	}

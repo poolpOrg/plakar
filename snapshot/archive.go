@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path"
 	"strings"
 
 	"github.com/PlakarKorp/plakar/snapshot/vfs"
@@ -83,19 +84,23 @@ func (snap *Snapshot) Archive(w io.Writer, format ArchiveFormat, paths []string,
 		return ErrInvalidArchiveFormat
 	}
 
-	for _, path := range paths {
-		err := fsc.WalkDir(path, func(entrypath string, e *vfs.Entry, err error) error {
+	for _, p := range paths {
+		err := fsc.WalkDir(p, func(entrypath string, e *vfs.Entry, err error) error {
 			if err != nil {
 				return err
 			}
 
 			outpath := entrypath
 			if rebase {
-				outpath = strings.TrimPrefix(outpath, path)
+				outpath = strings.TrimPrefix(outpath, p)
 			}
 			outpath = strings.TrimLeft(outpath, "/")
 			if outpath == "" {
-				outpath = "."
+				if e.IsDir() {
+					outpath = "."
+				} else {
+					outpath = path.Base(entrypath)
+				}
 			}
 
 			writer, err := archiveEntry(outpath, e)

@@ -109,8 +109,7 @@ func cmd_info(ctx *appcontext.AppContext, repo *repository.Repository, args []st
 		}
 
 	default:
-		fmt.Println("Invalid parameter. usage: info [snapshot|object|chunk|state|packfile|vfs]")
-		return 1, fmt.Errorf("Invalid parameter. usage: info [snapshot|object|chunk|state|packfile|vfs]")
+		return 1, fmt.Errorf("Invalid parameter. usage: info [errors|object|packfile|snapshot|state|vfs]")
 	}
 
 	return 0, nil
@@ -154,7 +153,14 @@ func info_repository(repo *repository.Repository) (int, error) {
 	if repo.Configuration().Encryption != nil {
 		fmt.Println("Encryption:")
 		fmt.Println(" - Algorithm:", repo.Configuration().Encryption.Algorithm)
-		fmt.Println(" - Key:", repo.Configuration().Encryption.Key)
+		fmt.Printf(" - Canary: %x\n", repo.Configuration().Encryption.Canary)
+		fmt.Println(" - KDF:", repo.Configuration().Encryption.KDF)
+		fmt.Println(" - KDFParams:")
+		fmt.Printf("   - N: %d\n", repo.Configuration().Encryption.KDFParams.N)
+		fmt.Printf("   - R: %d\n", repo.Configuration().Encryption.KDFParams.R)
+		fmt.Printf("   - P: %d\n", repo.Configuration().Encryption.KDFParams.P)
+		fmt.Printf("   - Salt: %x\n", repo.Configuration().Encryption.KDFParams.Salt)
+		fmt.Printf("   - KeyLen: %d\n", repo.Configuration().Encryption.KDFParams.KeyLen)
 	}
 
 	fmt.Println("Snapshots:", len(metadatas))
@@ -303,12 +309,7 @@ func info_state(repo *repository.Repository, args []string) error {
 
 			fmt.Printf("Version: %d.%d.%d\n", st.Metadata.Version/100, (st.Metadata.Version/10)%10, st.Metadata.Version%10)
 			fmt.Printf("Creation: %s\n", st.Metadata.Timestamp)
-			if len(st.Metadata.Extends) > 0 {
-				fmt.Printf("Extends:\n")
-				for _, stateID := range st.Metadata.Extends {
-					fmt.Printf("  %x\n", stateID)
-				}
-			}
+			fmt.Printf("State serial: %s\n", st.Metadata.Serial)
 
 			printBlobs := func(name string, Type packfile.Type) {
 				for snapshot, err := range st.ListObjectsOfType(Type) {
@@ -329,7 +330,6 @@ func info_state(repo *repository.Repository, args []string) error {
 			printBlobs("chunk", packfile.TYPE_CHUNK)
 			printBlobs("object", packfile.TYPE_OBJECT)
 			printBlobs("file", packfile.TYPE_VFS)
-			printBlobs("data", packfile.TYPE_DATA)
 		}
 	}
 	return nil

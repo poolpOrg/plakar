@@ -446,9 +446,6 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 		}
 
 		childiter := backupCtx.scanCache.EnumerateKeysWithPrefix("__file__:"+prefix, false)
-		if err != nil {
-			continue
-		}
 
 		for relpath, bytes := range childiter {
 			if strings.Contains(relpath, "/") {

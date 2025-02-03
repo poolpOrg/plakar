@@ -1,0 +1,49 @@
+.Dd February 3, 2025
+.Dt PLAKAR-SERVER 1
+.Os
+.Sh NAME
+.Nm plakar server
+.Nd Start a Plakar server instance
+.Sh SYNOPSIS
+.Nm
+.Op Fl allow-delete
+.Op Fl listen Ar address
+.Sh DESCRIPTION
+The
+.Nm
+command starts a Plakar server instance at the provided
+.Ar address ,
+allowing remote interaction with a Plakar repository over a network.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl allow-delete
+Enable delete operations.
+By default, delete operations are disabled to prevent accidental data
+loss.
+.It listen Ar address
+The hostname and port where to listen to, separated by a colon.
+The hostname is optional.
+If not given, the server defaults to listen on localhost at port 9876.
+.El
+.Sh EXAMPLES
+Start server with default Plakar protocol:
+.Bd -literal -offset indent
+plakar server
+.Ed
+.Pp
+Start HTTP server with delete operations enabled:
+.Bd -literal -offset indent
+plakar server -protocol http -allow-delete :8080
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as an unsupported protocol or invalid
+configuration.
+.El
+.Sh SEE ALSO
+.Xr plakar 1

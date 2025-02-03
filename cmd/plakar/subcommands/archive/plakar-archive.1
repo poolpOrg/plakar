@@ -1,0 +1,74 @@
+.Dd January 29, 2025
+.Dt PLAKAR-ARCHIVE 1
+.Os
+.Sh NAME
+.Nm plakar archive
+.Nd Create an archive from a Plakar snapshot
+.Sh SYNOPSIS
+.Nm
+.Op Fl format Ar type
+.Op Fl output Ar archive
+.Op Fl rebase
+.Ar snapshotID : Ns Ar path
+.Sh DESCRIPTION
+The
+.Nm
+command creates an
+.Ar archive
+of the given
+.Ar type
+from the contents at
+.Ar path
+of a specified Plakar snapshot, or all the files if no
+.Ar path
+is given.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl format Ar type
+Specify the archive format.
+Supported formats are:
+.Pp
+.Bl -tag -width tarball -compact
+.It Cm tar
+Creates a tar file.
+.It Cm tarball
+Creates a compressed tar.gz file.
+.It Cm zip
+Creates a zip archive.
+.El
+.It Fl output Ar pathname
+Specify the output path for the archive file.
+If omitted, the archive is created with a default name based on the
+current date and time.
+.It Fl rebase
+Strip the leading path from archived files, useful for creating "flat"
+archives without nested directories.
+.El
+.Sh EXAMPLES
+Create a tarball of the entire snapshot:
+.Bd -literal -offset indent
+plakar archive -output backup.tar.gz -format tarball abc123
+.Ed
+.Pp
+Create a zip archive of a specific directory within a snapshot:
+.Bd -literal -offset indent
+plakar archive -output dir.zip -format zip abc123:/var/www
+.Ed
+.Pp
+Archive with rebasing to remove directory structure:
+.Bd -literal -offset indent
+plakar archive -rebase -format tar abc123
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as unsupported format, missing files, or
+permission issues.
+.El
+.Sh SEE ALSO
+.Xr plakar 1 ,
+.Xr plakar-backup 1

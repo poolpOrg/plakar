@@ -1,0 +1,48 @@
+.Dd February 1, 2025
+.Dt PLAKAR-LOCATE 1
+.Os
+.Sh NAME
+.Nm plakar locate
+.Nd Find filenames in a Plakar snapshot
+.Sh SYNOPSIS
+.Nm
+.Op Fl snapshot Ar snapshotID
+.Ar patterns ...
+.Sh DESCRIPTION
+The
+.Nm
+command search all the snapshots to find file names matching any of
+the given
+.Ar patterns
+and prints the abbreviated snapshot ID and the full path of the
+matched files.
+Matching works according to the shell globbing rules.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl snapshot Ar snapshotID
+Limit the search to the given snapshot.
+.El
+.Sh EXAMPLES
+Search for files ending in
+.Dq wd :
+.Bd -literal -offset indent
+$ plakar locate '*wd'
+abc123:/etc/master.passwd
+abc123:/etc/passwd
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as invalid parameters, inability to create the
+repository, or configuration issues.
+.El
+.Sh SEE ALSO
+.Xr plakar 1 ,
+.Xr plakar-backup 1
+.Sh CAVEATS
+The patterns may have to be quote to avoid the shell attempting to
+expand them.

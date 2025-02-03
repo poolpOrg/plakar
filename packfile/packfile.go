@@ -14,13 +14,12 @@ const VERSION = 100
 type Type uint8
 
 const (
-	TYPE_SNAPSHOT  Type = 0
-	TYPE_CHUNK     Type = 1
-	TYPE_OBJECT    Type = 2
-	TYPE_VFS       Type = 3
-	TYPE_VFS_ENTRY Type = 4
-	TYPE_CHILD     Type = 5
-	TYPE_DATA      Type = 6
+	TYPE_SNAPSHOT  Type = 1
+	TYPE_CHUNK     Type = 2
+	TYPE_OBJECT    Type = 3
+	TYPE_VFS       Type = 4
+	TYPE_VFS_ENTRY Type = 5
+	TYPE_CHILD     Type = 6
 	TYPE_SIGNATURE Type = 7
 	TYPE_ERROR     Type = 8
 )
@@ -33,7 +32,7 @@ type Blob struct {
 }
 
 func Types() []Type {
-	return []Type{TYPE_SNAPSHOT, TYPE_CHUNK, TYPE_OBJECT, TYPE_VFS, TYPE_VFS_ENTRY, TYPE_CHILD, TYPE_DATA, TYPE_SIGNATURE, TYPE_ERROR}
+	return []Type{TYPE_SNAPSHOT, TYPE_CHUNK, TYPE_OBJECT, TYPE_VFS, TYPE_VFS_ENTRY, TYPE_CHILD, TYPE_SIGNATURE, TYPE_ERROR}
 }
 
 func (b Blob) TypeName() string {
@@ -50,8 +49,6 @@ func (b Blob) TypeName() string {
 		return "vfs_entry"
 	case TYPE_CHILD:
 		return "directory"
-	case TYPE_DATA:
-		return "data"
 	case TYPE_SIGNATURE:
 		return "signature"
 	case TYPE_ERROR:

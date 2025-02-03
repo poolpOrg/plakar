@@ -5,7 +5,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"io"
 
@@ -14,7 +13,17 @@ import (
 
 type Configuration struct {
 	Algorithm string
-	Key       string
+	KDF       string
+	KDFParams KDFParams
+	Canary    []byte
+}
+
+type KDFParams struct {
+	Salt   []byte
+	N      int
+	R      int
+	P      int
+	KeyLen int
 }
 
 const (
@@ -25,47 +34,49 @@ const (
 func DefaultConfiguration() *Configuration {
 	return &Configuration{
 		Algorithm: "AES256-GCM",
+		KDF:       "SCRYPT",
+		KDFParams: KDFParams{
+			N:      1 << 15,
+			R:      8,
+			P:      1,
+			KeyLen: 32,
+		},
 	}
+}
+
+func Salt() ([]byte, error) {
+	salt := make([]byte, saltSize)
+	if _, err := rand.Read(salt); err != nil {
+		return nil, fmt.Errorf("failed to generate salt: %w", err)
+	}
+	return salt, nil
 }
 
 // BuildSecretFromPassphrase generates a secret from a passphrase using scrypt
-func BuildSecretFromPassphrase(passphrase []byte) (string, error) {
-	// Generate a random salt
-	salt := make([]byte, saltSize)
-	if _, err := rand.Read(salt); err != nil {
-		return "", fmt.Errorf("failed to generate salt: %w", err)
-	}
-
-	// Derive the key using scrypt with high CPU and memory costs
-	dk, err := scrypt.Key(passphrase, salt, 1<<15, 8, 1, 32)
-	if err != nil {
-		return "", fmt.Errorf("key derivation failed: %w", err)
-	}
-
-	// Return the base64-encoded secret including the salt
-	return base64.StdEncoding.EncodeToString(append(salt, dk...)), nil
+func DeriveKey(params KDFParams, passphrase []byte) ([]byte, error) {
+	return scrypt.Key(passphrase, params.Salt, params.N, params.R, params.P, params.KeyLen)
 }
 
-// DeriveSecret derives a secret key from a passphrase and a stored secret using scrypt
-func DeriveSecret(passphrase []byte, secret string) ([]byte, error) {
-	decodedSecret, err := base64.StdEncoding.DecodeString(secret)
-	if err != nil {
+func DeriveCanary(key []byte) ([]byte, error) {
+	canary := make([]byte, 32)
+	if _, err := rand.Read(canary); err != nil {
 		return nil, err
 	}
 
-	salt := decodedSecret[:saltSize]
-	expectedKey := decodedSecret[saltSize:]
-
-	// Derive the key using scrypt with the same parameters
-	dk, err := scrypt.Key(passphrase, salt, 1<<15, 8, 1, 32)
+	rd, err := EncryptStream(key, bytes.NewReader(canary))
 	if err != nil {
 		return nil, err
 	}
+	return io.ReadAll(rd)
+}
 
-	if !bytes.Equal(dk, expectedKey) {
-		return nil, fmt.Errorf("passphrase does not match")
+func VerifyCanary(key []byte, canary []byte) bool {
+	rd, err := DecryptStream(key, bytes.NewReader(canary))
+	if err != nil {
+		return false
 	}
-	return dk, nil
+	_, err = io.ReadAll(rd)
+	return err == nil
 }
 
 // EncryptStream encrypts a stream using AES-GCM with a random session-specific subkey

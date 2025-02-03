@@ -1,0 +1,55 @@
+.Dd February 1, 2025
+.Dt PLAKAR-CREATE 1
+.Os
+.Sh NAME
+.Nm plakar create
+.Nd Create a new Plakar repository
+.Sh SYNOPSIS
+.Nm
+.Op Fl no-encryption
+.Op Fl no-compression
+.Op Ar path
+.Sh DESCRIPTION
+The
+.Nm
+command creates a new Plakar repository at the specified
+.Ar path ,
+which defaults to
+.Pa ~/.plakar .
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl no-encryption
+Disable transparent encryption for the repository.
+If specified, the repository will not use encryption.
+.It Fl no-compression
+Disable transparent compression for the repository.
+If specified, the repository will not use compression.
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width PLAKAR_PASSPHRASE
+.It Ev PLAKAR_PASSPHRASE
+Repository encryption password.
+.El
+.Sh EXAMPLES
+Create a new repository with default settings:
+.Bd -literal -offset indent
+plakar create
+.Ed
+.Pp
+Create a new repository without encryption:
+.Bd -literal -offset indent
+plakar create -no-encryption /path/to/repo
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as invalid parameters, inability to create the
+repository, or configuration issues.
+.El
+.Sh SEE ALSO
+.Xr plakar 1 ,
+.Xr plakar-backup 1

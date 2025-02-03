@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"log"
 	"net/http"
 	"strings"
 
@@ -28,7 +29,7 @@ type ApiErrorRes struct {
 	Error *ApiError `json:"error"`
 }
 
-func handleError(w http.ResponseWriter, err error) {
+func handleError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, repository.ErrBlobNotFound):
 		fallthrough
@@ -46,6 +47,7 @@ func handleError(w http.ResponseWriter, err error) {
 
 	apierr, ok := err.(*ApiError)
 	if !ok {
+		log.Printf("Unknown error encountered while serving %s: %v", r.URL, err)
 		apierr = &ApiError{
 			HttpCode: 500,
 			ErrCode:  "internal-error",
@@ -62,7 +64,7 @@ type APIView func(w http.ResponseWriter, r *http.Request) error
 func (view APIView) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := view(w, r); err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 	}
 }
 
@@ -73,12 +75,12 @@ func TokenAuthMiddleware(token string) func(http.Handler) http.Handler {
 			if token != "" {
 				key := r.Header.Get("Authorization")
 				if key == "" {
-					handleError(w, authError("missing Authorization header"))
+					handleError(w, r, authError("missing Authorization header"))
 					return
 				}
 
 				if strings.Compare(key, "Bearer "+token) != 0 {
-					handleError(w, authError("invalid token"))
+					handleError(w, r, authError("invalid token"))
 					return
 				}
 			}
@@ -125,4 +127,7 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, token strin
 	server.Handle("GET /api/snapshot/vfs/{snapshot_path...}", authToken(APIView(snapshotVFSBrowse)))
 	server.Handle("GET /api/snapshot/vfs/children/{snapshot_path...}", authToken(APIView(snapshotVFSChildren)))
 	server.Handle("GET /api/snapshot/vfs/errors/{snapshot_path...}", authToken(APIView(snapshotVFSErrors)))
+
+	server.Handle("POST /api/snapshot/vfs/downloader/{snapshot_path...}", authToken(APIView(snapshotVFSDownloader)))
+	server.Handle("GET /api/snapshot/vfs/downloader-sign-url/{id}", APIView(snapshotVFSDownloaderSigned))
 }
