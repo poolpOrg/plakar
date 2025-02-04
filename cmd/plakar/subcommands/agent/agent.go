@@ -154,7 +154,7 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 
 		go func() {
 			http.Handle("/metrics", promhttp.Handler())
-			http.Serve(promlistener, nil)
+			_ = http.Serve(promlistener, nil)
 		}()
 	}
 
