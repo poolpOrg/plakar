@@ -2,17 +2,8 @@ package api
 
 import (
 	"net/http"
-	"os"
 	"reflect"
 	"testing"
-
-	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/caching"
-	"github.com/PlakarKorp/plakar/logging"
-	"github.com/PlakarKorp/plakar/repository"
-	"github.com/PlakarKorp/plakar/storage"
-	ptesting "github.com/PlakarKorp/plakar/testing"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPathParamToID(t *testing.T) {
@@ -272,64 +263,6 @@ func TestQueryParamToSortKeys(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("QueryParamToSortKeys() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func _TestSnapshotPathParam(t *testing.T) {
-	testCases := []struct {
-		name     string
-		id       string
-		config   *storage.Configuration
-		location string
-		err      string
-	}{
-		{
-			name:     "empty id",
-			id:       "",
-			location: "/test/location",
-			config:   ptesting.NewConfiguration(),
-			err:      "invalid_params: Invalid parameter",
-		},
-		{
-			name:     "empty id",
-			id:       "12345:/dummy",
-			location: "/test/location?behavior=oneState",
-			config:   ptesting.NewConfiguration(),
-			err:      "invalid_params: Invalid parameter",
-		},
-		{
-			name:     "working",
-			id:       "1000000000000000000000000000000000000000000000000000000000000000:/dummy",
-			location: "/test/location?behavior=oneState",
-			config:   ptesting.NewConfiguration(),
-		},
-	}
-
-	for _, c := range testCases {
-		t.Run(c.name, func(t *testing.T) {
-			lstore, err := storage.Create(c.location, *c.config)
-			require.NoError(t, err, "creating storage")
-
-			ctx := appcontext.NewAppContext()
-			cache := caching.NewManager("/tmp/test_plakar")
-			defer cache.Close()
-			ctx.SetCache(cache)
-			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-			repo, err := repository.New(ctx, lstore, nil)
-			require.NoError(t, err, "creating repository")
-
-			req, err := http.NewRequest("GET", "/path/{id}", nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			req.SetPathValue("id", c.id)
-
-			_, _, err = SnapshotPathParam(req, repo, "id")
-			if c.err != "" {
-				require.Error(t, err)
 			}
 		})
 	}
