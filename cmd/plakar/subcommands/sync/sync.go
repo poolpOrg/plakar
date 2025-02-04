@@ -231,7 +231,7 @@ func synchronize(srcRepository *repository.Repository, dstRepository *repository
 			if err != nil {
 				return err
 			}
-			dstSnapshot.PutBlob(resources.RT_CHUNK, chunkID, chunkData)
+			_ = dstSnapshot.PutBlob(resources.RT_CHUNK, chunkID, chunkData)
 		}
 	}
 
@@ -248,7 +248,7 @@ func synchronize(srcRepository *repository.Repository, dstRepository *repository
 			if err != nil {
 				return err
 			}
-			dstSnapshot.PutBlob(resources.RT_OBJECT, objectID, objectData)
+			_ = dstSnapshot.PutBlob(resources.RT_OBJECT, objectID, objectData)
 		}
 	}
 
@@ -270,7 +270,7 @@ func synchronize(srcRepository *repository.Repository, dstRepository *repository
 			if err != nil {
 				return err
 			}
-			dstSnapshot.PutBlob(resources.RT_VFS_ENTRY, entryID, entryData)
+			_ = dstSnapshot.PutBlob(resources.RT_VFS_ENTRY, entryID, entryData)
 		}
 	}
 
@@ -280,7 +280,7 @@ func synchronize(srcRepository *repository.Repository, dstRepository *repository
 			if err != nil {
 				return err
 			}
-			dstSnapshot.PutBlob(resources.RT_VFS, csum, bytes)
+			_ = dstSnapshot.PutBlob(resources.RT_VFS, csum, bytes)
 		}
 		return nil
 	})
