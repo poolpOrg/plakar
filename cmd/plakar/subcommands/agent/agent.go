@@ -143,8 +143,6 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 		return fmt.Errorf("failed to set socket permissions: %w", err)
 	}
 
-	cancelCtx, _ := context.WithCancel(context.Background())
-
 	if cmd.prometheus != "" {
 		promlistener, err := net.Listen("tcp", cmd.prometheus)
 		if err != nil {
@@ -161,23 +159,12 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 	var wg sync.WaitGroup
 
 	for {
-		select {
-		case <-cancelCtx.Done():
-			return nil
-		default:
-		}
-
 		conn, err := cmd.listener.Accept()
 		if err != nil {
-			select {
-			case <-cancelCtx.Done():
+			if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "use of closed network connection" {
 				return nil
-			default:
-				if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "use of closed network connection" {
-					return nil
-				}
-				return fmt.Errorf("failed to accept connection: %w", err)
 			}
+			return fmt.Errorf("failed to accept connection: %w", err)
 		}
 
 		wg.Add(1)
