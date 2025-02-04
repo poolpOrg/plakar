@@ -274,7 +274,7 @@ func synchronize(srcRepository *repository.Repository, dstRepository *repository
 		}
 	}
 
-	fs.VisitNodes(func(csum objects.Checksum, node *btree.Node[string, objects.Checksum, objects.Checksum]) error {
+	_ = fs.VisitNodes(func(csum objects.Checksum, node *btree.Node[string, objects.Checksum, objects.Checksum]) error {
 		if !dstRepository.BlobExists(resources.RT_VFS, csum) {
 			bytes, err := msgpack.Marshal(node)
 			if err != nil {
