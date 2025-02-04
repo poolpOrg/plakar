@@ -64,6 +64,6 @@ func (cmd *Server) Name() string {
 }
 
 func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	httpd.Server(repo, cmd.ListenAddr, cmd.NoDelete)
+	_ = httpd.Server(repo, cmd.ListenAddr, cmd.NoDelete)
 	return 0, nil
 }
