@@ -20,4 +20,8 @@ type StateCache interface {
 	GetDeltaByCsum(blobCsum objects.Checksum) ([]byte, error)
 	GetDeltasByType(blobType resources.Type) iter.Seq2[objects.Checksum, []byte]
 	GetDeltas() iter.Seq2[objects.Checksum, []byte]
+
+	PutDeleted(blobType resources.Type, blobCsum objects.Checksum, data []byte) error
+	HasDeleted(blobType resources.Type, blobCsum objects.Checksum) (bool, error)
+	GetDeleteds() iter.Seq2[objects.Checksum, []byte]
 }

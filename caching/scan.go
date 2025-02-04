@@ -64,6 +64,29 @@ func (c *ScanCache) delete(prefix, key string) error {
 	return c.db.Delete([]byte(fmt.Sprintf("%s:%s", prefix, key)), nil)
 }
 
+func (c *ScanCache) getObjects(keyPrefix string) iter.Seq2[objects.Checksum, []byte] {
+	return func(yield func(objects.Checksum, []byte) bool) {
+		iter := c.db.NewIterator(nil, nil)
+		defer iter.Release()
+
+		for iter.Seek([]byte(keyPrefix)); iter.Valid(); iter.Next() {
+			if !strings.HasPrefix(string(iter.Key()), keyPrefix) {
+				break
+			}
+
+			/* Extract the csum part of the key, this avoids decoding the full
+			 * entry later on if that's the only thing we need */
+			key := iter.Key()
+			hex_csum := string(key[bytes.LastIndexByte(key, byte(':'))+1:])
+			csum, _ := hex.DecodeString(hex_csum)
+
+			if !yield(objects.Checksum(csum), iter.Value()) {
+				return
+			}
+		}
+	}
+}
+
 func (c *ScanCache) PutFile(file string, data []byte) error {
 	return c.put("__file__", file, data)
 }
@@ -197,27 +220,19 @@ func (c *ScanCache) GetDeltasByType(blobType resources.Type) iter.Seq2[objects.C
 }
 
 func (c *ScanCache) GetDeltas() iter.Seq2[objects.Checksum, []byte] {
-	return func(yield func(objects.Checksum, []byte) bool) {
-		iter := c.db.NewIterator(nil, nil)
-		defer iter.Release()
+	return c.getObjects("__delta__:")
+}
 
-		keyPrefix := "__delta__:"
-		for iter.Seek([]byte(keyPrefix)); iter.Valid(); iter.Next() {
-			if !strings.HasPrefix(string(iter.Key()), keyPrefix) {
-				break
-			}
+func (c *ScanCache) PutDeleted(blobType resources.Type, blobCsum objects.Checksum, data []byte) error {
+	return c.put("__deleted__", fmt.Sprintf("%d:%x", blobType, blobCsum), data)
+}
 
-			/* Extract the csum part of the key, this avoids decoding the full
-			 * entry later on if that's the only thing we need */
-			key := iter.Key()
-			hex_csum := string(key[bytes.LastIndexByte(key, byte(':'))+1:])
-			csum, _ := hex.DecodeString(hex_csum)
+func (c *ScanCache) HasDeleted(blobType resources.Type, blobCsum objects.Checksum) (bool, error) {
+	return c.has("__deleted__", fmt.Sprintf("%d:%x", blobType, blobCsum))
+}
 
-			if !yield(objects.Checksum(csum), iter.Value()) {
-				return
-			}
-		}
-	}
+func (c *ScanCache) GetDeleteds() iter.Seq2[objects.Checksum, []byte] {
+	return c.getObjects("__deleted__:")
 }
 
 func (c *ScanCache) EnumerateKeysWithPrefix(prefix string, reverse bool) iter.Seq2[string, []byte] {

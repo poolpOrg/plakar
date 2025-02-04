@@ -56,6 +56,29 @@ func (c *_RepositoryCache) get(prefix, key string) ([]byte, error) {
 	return data, nil
 }
 
+func (c *_RepositoryCache) getObjects(keyPrefix string) iter.Seq2[objects.Checksum, []byte] {
+	return func(yield func(objects.Checksum, []byte) bool) {
+		iter := c.db.NewIterator(nil, nil)
+		defer iter.Release()
+
+		for iter.Seek([]byte(keyPrefix)); iter.Valid(); iter.Next() {
+			if !strings.HasPrefix(string(iter.Key()), keyPrefix) {
+				break
+			}
+
+			/* Extract the csum part of the key, this avoids decoding the full
+			 * entry later on if that's the only thing we need */
+			key := iter.Key()
+			hex_csum := string(key[bytes.LastIndexByte(key, byte(':'))+1:])
+			csum, _ := hex.DecodeString(hex_csum)
+
+			if !yield(objects.Checksum(csum), iter.Value()) {
+				return
+			}
+		}
+	}
+}
+
 func (c *_RepositoryCache) delete(prefix, key string) error {
 	return c.db.Delete([]byte(fmt.Sprintf("%s:%s", prefix, key)), nil)
 }
@@ -152,25 +175,17 @@ func (c *_RepositoryCache) GetDeltasByType(blobType resources.Type) iter.Seq2[ob
 }
 
 func (c *_RepositoryCache) GetDeltas() iter.Seq2[objects.Checksum, []byte] {
-	return func(yield func(objects.Checksum, []byte) bool) {
-		iter := c.db.NewIterator(nil, nil)
-		defer iter.Release()
+	return c.getObjects("__delta__:")
+}
 
-		keyPrefix := "__delta__:"
-		for iter.Seek([]byte(keyPrefix)); iter.Valid(); iter.Next() {
-			if !strings.HasPrefix(string(iter.Key()), keyPrefix) {
-				break
-			}
+func (c *_RepositoryCache) PutDeleted(blobType resources.Type, blobCsum objects.Checksum, data []byte) error {
+	return c.put("__deleted__", fmt.Sprintf("%d:%x", blobType, blobCsum), data)
+}
 
-			/* Extract the csum part of the key, this avoids decoding the full
-			 * entry later on if that's the only thing we need */
-			key := iter.Key()
-			hex_csum := string(key[bytes.LastIndexByte(key, byte(':'))+1:])
-			csum, _ := hex.DecodeString(hex_csum)
+func (c *_RepositoryCache) HasDeleted(blobType resources.Type, blobCsum objects.Checksum) (bool, error) {
+	return c.has("__deleted__", fmt.Sprintf("%d:%x", blobType, blobCsum))
+}
 
-			if !yield(objects.Checksum(csum), iter.Value()) {
-				return
-			}
-		}
-	}
+func (c *_RepositoryCache) GetDeleteds() iter.Seq2[objects.Checksum, []byte] {
+	return c.getObjects("__deleted__:")
 }

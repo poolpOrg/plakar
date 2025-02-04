@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"hash"
 	"io"
@@ -308,22 +309,34 @@ func (r *Repository) DeleteSnapshot(snapshotID objects.Checksum) error {
 		r.Logger().Trace("repository", "DeleteSnapshot(%x): %s", snapshotID, time.Since(t0))
 	}()
 
-	/*	ret := r.state.DeleteSnapshot(snapshotID)
-			if ret != nil {
-				return ret
-			}
+	var identifier objects.Checksum
+	n, err := rand.Read(identifier[:])
+	if err != nil {
+		return err
+	}
+	if n != len(identifier) {
+		return io.ErrShortWrite
+	}
 
-			var buffer bytes.Buffer
-			err := r.state.SerializeStream(&buffer)
-			if err != nil {
-				return err
-			}
+	sc, err := r.AppContext().GetCache().Scan(identifier)
+	deltaState := r.state.Derive(sc)
 
-		checksum := r.Checksum(buffer.Bytes())
-		if err := r.PutState(checksum, &buffer); err != nil {
-			return err
-		}
-	*/
+	ret := deltaState.DeleteSnapshot(snapshotID)
+	if ret != nil {
+		return ret
+	}
+
+	buffer := &bytes.Buffer{}
+	err = deltaState.SerializeToStream(buffer)
+	if err != nil {
+		return err
+	}
+
+	checksum := r.Checksum(buffer.Bytes())
+	if err := r.PutState(checksum, buffer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
