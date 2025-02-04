@@ -37,8 +37,8 @@ type EntryType uint8
 
 const (
 	ET_METADATA  EntryType = 1
-	ET_LOCATIONS           = 2
-	ET_TIMESTAMP           = 3
+	ET_LOCATIONS EntryType = 2
+	ET_TIMESTAMP EntryType = 3
 )
 
 type Metadata struct {
