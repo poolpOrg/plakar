@@ -36,9 +36,9 @@ const VERSION = 100
 type EntryType uint8
 
 const (
-	ET_METADATA  EntryType = 1
-	ET_LOCATIONS           = 2
-	ET_TIMESTAMP           = 3
+	ET_METADATA         EntryType = 1
+	ET_LOCATIONS                  = 2
+	ET_DELETED_SNAPSHOT           = 3
 )
 
 type Metadata struct {
@@ -54,16 +54,14 @@ type Location struct {
 	Length   uint32
 }
 
+const LocationSerializedSize = 32 + 4 + 4
+
 type DeltaEntry struct {
 	Type     resources.Type
 	Blob     objects.Checksum
 	Location Location
 }
 
-/* /!\ Always keep those in sync with the serialized format on disk.
- * We are not using reflect.SizeOf because we might have padding in those structs
- */
-const LocationSerializedSize = 32 + 4 + 4
 const DeltaEntrySerializedSize = 1 + 32 + LocationSerializedSize
 
 /*
@@ -181,7 +179,7 @@ func (ls *LocalState) InsertState(stateID objects.Checksum, rd io.Reader) error 
 	return nil
 }
 
-/* On disk format is <EntryType><Entry>...N<header>
+/* On disk format is <EntryType><EntryLenght><Entry>...N<header>
  * Counting keys would mean iterating twice so we reverse the format and add a
  * type.
  */
@@ -203,6 +201,7 @@ func (ls *LocalState) SerializeToStream(w io.Writer) error {
 	/* First we serialize all the LOCATIONS type entries */
 	for _, entry := range ls.cache.GetDeltas() {
 		w.Write([]byte{byte(ET_LOCATIONS)})
+		writeUint32(DeltaEntrySerializedSize)
 		w.Write(entry)
 	}
 
@@ -308,22 +307,39 @@ func (ls *LocalState) deserializeFromStream(r io.Reader) error {
 			return fmt.Errorf("failed to read entry type %w", err)
 		}
 
-		if EntryType(et_buf[0]) == ET_METADATA {
+		entryType := EntryType(et_buf[0])
+		if entryType == ET_METADATA {
 			break
 		}
 
-		if n, err := io.ReadFull(r, de_buf); err != nil {
-			return fmt.Errorf("failed to read delta entry %w, read(%d)/expected(%d)", err, n, DeltaEntrySerializedSize)
-		}
-
-		// We need to decode just to make the key, but we can reuse the buffer
-		// to put inside the data part of the cache.
-		delta, err := DeltaEntryFromBytes(de_buf)
+		length, err := readUint32()
 		if err != nil {
-			return fmt.Errorf("failed to deserialize delta entry %w", err)
+			return fmt.Errorf("failed to read entry length %w", err)
 		}
 
-		ls.cache.PutDelta(delta.Type, delta.Blob, de_buf)
+		switch entryType {
+		case ET_LOCATIONS:
+			if length != DeltaEntrySerializedSize {
+				return fmt.Errorf("failed to read delta entry wrong length got(%d)/expected(%d)", length, DeltaEntrySerializedSize)
+			}
+
+			if n, err := io.ReadFull(r, de_buf); err != nil {
+				return fmt.Errorf("failed to read delta entry %w, read(%d)/expected(%d)", err, n, length)
+			}
+
+			// We need to decode just to make the key, but we can reuse the buffer
+			// to put inside the data part of the cache.
+			delta, err := DeltaEntryFromBytes(de_buf)
+			if err != nil {
+				return fmt.Errorf("failed to deserialize delta entry %w", err)
+			}
+
+			ls.cache.PutDelta(delta.Type, delta.Blob, de_buf)
+		default:
+			// Our version doesn't know this entry type, just skip it.
+			io.CopyN(io.Discard, r, int64(length))
+		}
+
 	}
 
 	/* Deserialize Metadata */
