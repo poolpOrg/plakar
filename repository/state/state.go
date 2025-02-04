@@ -200,13 +200,24 @@ func (ls *LocalState) SerializeToStream(w io.Writer) error {
 
 	/* First we serialize all the LOCATIONS type entries */
 	for _, entry := range ls.cache.GetDeltas() {
-		w.Write([]byte{byte(ET_LOCATIONS)})
-		writeUint32(DeltaEntrySerializedSize)
-		w.Write(entry)
+		if _, err := w.Write([]byte{byte(ET_LOCATIONS)}); err != nil {
+			return fmt.Errorf("failed to write delta entry type: %w", err)
+		}
+
+		if err := writeUint32(DeltaEntrySerializedSize); err != nil {
+			return fmt.Errorf("failed to write delta entry length: %w", err)
+		}
+
+		if _, err := w.Write(entry); err != nil {
+			return fmt.Errorf("failed to write delta entry: %w", err)
+		}
 	}
 
 	/* Finally we serialize the Metadata */
-	w.Write([]byte{byte(ET_METADATA)})
+	if _, err := w.Write([]byte{byte(ET_METADATA)}); err != nil {
+		return fmt.Errorf("failed to write metadata type %w", err)
+	}
+
 	if err := writeUint32(ls.Metadata.Version); err != nil {
 		return fmt.Errorf("failed to write version: %w", err)
 	}
