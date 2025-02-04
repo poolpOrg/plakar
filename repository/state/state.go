@@ -323,7 +323,7 @@ func (ls *LocalState) deserializeFromStream(r io.Reader) error {
 			return fmt.Errorf("failed to deserialize delta entry %w", err)
 		}
 
-		ls.cache.PutDelta(delta.Type, delta.Blob, de_buf)
+		_ = ls.cache.PutDelta(delta.Type, delta.Blob, de_buf)
 	}
 
 	/* Deserialize Metadata */
@@ -378,7 +378,7 @@ func (ls *LocalState) SetPackfileForBlob(Type resources.Type, packfileChecksum o
 		},
 	}
 
-	ls.PutDelta(de)
+	_ = ls.PutDelta(de)
 }
 
 func (ls *LocalState) BlobExists(Type resources.Type, blobChecksum objects.Checksum) bool {
