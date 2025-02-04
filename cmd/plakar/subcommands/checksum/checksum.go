@@ -90,7 +90,7 @@ func (cmd *Checksum) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 			continue
 		}
 
-		displayChecksums(ctx, fs, repo, snap, pathname, cmd.Fast)
+		_ = displayChecksums(ctx, fs, repo, snap, pathname, cmd.Fast)
 	}
 
 	return 0, nil
