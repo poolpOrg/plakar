@@ -22,13 +22,9 @@ to it.
 
 # EXAMPLES
 
-Execute a script from a snapshot with no arguments:
+Execute a script from a snapshot with some arguments:
 
-	plakar exec abc123:/path/to/script.sh
-
-Run an executable from a snapshot with arguments:
-
-	plakar exec abc123:/path/to/executable --option value
+	$ plakar exec abc123:/home/op/korpus/driver.sh -r 100
 
 # DIAGNOSTICS
 
@@ -41,4 +37,4 @@ doesn't exist.
 
 plakar(1)
 
-Nixpkgs - January 29, 2025
+Nixpkgs - February 3, 2025

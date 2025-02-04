@@ -32,16 +32,6 @@ listen *address*
 > The hostname is optional.
 > If not given, the server defaults to listen on localhost at port 9876.
 
-# EXAMPLES
-
-Start server with default Plakar protocol:
-
-	plakar server
-
-Start HTTP server with delete operations enabled:
-
-	plakar server -protocol http -allow-delete :8080
-
 # DIAGNOSTICS
 
 The **plakar server** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.

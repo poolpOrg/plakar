@@ -16,7 +16,7 @@ func (snapshot *Snapshot) NewReader(pathname string) (io.ReadCloser, error) {
 func NewReader(snap *Snapshot, pathname string) (io.ReadCloser, error) {
 	pathname = path.Clean(pathname)
 
-	fsc, err := vfs.NewFilesystem(snap.Repository(), snap.Header.Root)
+	fsc, err := vfs.NewFilesystem(snap.Repository(), snap.Header.GetSource(0).VFS)
 	if err != nil {
 		return nil, err
 	}

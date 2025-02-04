@@ -35,19 +35,9 @@ are fully synchronized.
 Path to the peer repository to synchronize with.
 .El
 .Sh EXAMPLES
-Basic synchronization from local to peer repository:
-.Bd -literal -offset indent
-plakar sync to /path/to/peer/repo
-.Ed
-.Pp
-Synchronize specific snapshot to peer repository:
-.Bd -literal -offset indent
-plakar sync abc123 to /path/to/peer/repo
-.Ed
-.Pp
 Bi-directional synchronization with peer repository:
 .Bd -literal -offset indent
-plakar sync with /path/to/peer/repo
+$ plakar sync with /path/to/peer/repo
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

@@ -38,16 +38,6 @@ The options are as follows:
 
 > Repository encryption password.
 
-# EXAMPLES
-
-Create a new repository with default settings:
-
-	plakar create
-
-Create a new repository without encryption:
-
-	plakar create -no-encryption /path/to/repo
-
 # DIAGNOSTICS
 
 The **plakar create** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
@@ -66,4 +56,4 @@ The **plakar create** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 plakar(1),
 plakar-backup(1)
 
-Nixpkgs - February 1, 2025
+Nixpkgs - February 3, 2025

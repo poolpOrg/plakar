@@ -37,11 +37,11 @@ The options are as follows:
 
 Display a file's contents from a snapshot:
 
-	plakar cat abc123:/etc/passwd
+	$ plakar cat abc123:/etc/passwd
 
 Display a file with syntax highlighting:
 
-	plakar cat -highlight abc123:/path/to/script.sh
+	$ plakar cat -highlight abc123:/home/op/korpus/driver.sh
 
 # DIAGNOSTICS
 
@@ -61,4 +61,4 @@ The **plakar cat** utility exits&#160;0 on success, and&#160;&gt;0 if an error o
 plakar(1),
 plakar-backup(1)
 
-Nixpkgs - January 29, 2025
+Nixpkgs - February 3, 2025

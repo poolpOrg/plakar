@@ -26,10 +26,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("stdio", cmd_stdio)
+	subcommands.Register("stdio", parse_cmd_stdio)
 }
 
-func cmd_stdio(ctx *appcontext.AppContext, _ *repository.Repository, args []string) (int, error) {
+func parse_cmd_stdio(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_allowdelete bool
 
 	flags := flag.NewFlagSet("stdio", flag.ExitOnError)
@@ -40,8 +40,18 @@ func cmd_stdio(ctx *appcontext.AppContext, _ *repository.Repository, args []stri
 	if opt_allowdelete {
 		noDelete = false
 	}
-	if err := plakard.Stdio(ctx, &plakard.ServerOptions{
+	return &Stdio{
 		NoDelete: noDelete,
+	}, nil
+}
+
+type Stdio struct {
+	NoDelete bool
+}
+
+func (cmd *Stdio) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	if err := plakard.Stdio(ctx, &plakard.ServerOptions{
+		NoDelete: cmd.NoDelete,
 	}); err != nil {
 		return 1, err
 	}

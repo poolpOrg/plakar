@@ -34,13 +34,13 @@ The options are as follows:
 
 Compare root directories of two snapshots:
 
-	plakar diff abc123 def456
+	$ plakar diff abc123 def456
 
 Compare
 across snapshots with highlighting:
 */etc/passwd*
 
-	plakar diff -highlight abc123:/etc/passwd def456:/etc/passwd
+	$ plakar diff -highlight abc123:/etc/passwd def456:/etc/passwd
 
 # DIAGNOSTICS
 
@@ -60,4 +60,4 @@ The **plakar diff** utility exits&#160;0 on success, and&#160;&gt;0 if an error 
 plakar(1),
 plakar-backup(1)
 
-Nixpkgs - January 29, 2025
+Nixpkgs - February 3, 2025

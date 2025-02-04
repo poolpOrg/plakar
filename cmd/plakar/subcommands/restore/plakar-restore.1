@@ -1,4 +1,4 @@
-.Dd January 29, 2025
+.Dd February 3, 2025
 .Dt PLAKAR-RESTORE 1
 .Os
 .Sh NAME
@@ -49,17 +49,17 @@ Suppress output to standard input, only logging errors and warnings.
 .Sh EXAMPLES
 Restore all files from a specific snapshot to the current directory:
 .Bd -literal -offset indent
-plakar restore abc123
+$ plakar restore abc123
 .Ed
 .Pp
 Restore to a specific directory:
 .Bd -literal -offset indent
-plakar restore -to /path/to/restore abc123
+$ plakar restore -to /mnt/ abc123
 .Ed
 .Pp
 Restore with rebase option, placing files directly in the target directory:
 .Bd -literal -offset indent
-plakar restore -rebase -to /path/to/restore abc123
+$ plakar restore -rebase -to /home/op abc123
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

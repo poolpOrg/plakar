@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/plakar/objects"
-	"github.com/PlakarKorp/plakar/search"
 	"github.com/PlakarKorp/plakar/snapshot"
 	"github.com/PlakarKorp/plakar/snapshot/header"
 	"github.com/PlakarKorp/plakar/snapshot/vfs"
@@ -409,57 +408,6 @@ func snapshotVFSErrors(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(items)
 }
 
-func snapshotSearch(w http.ResponseWriter, r *http.Request) error {
-	snapshotID32, path, err := SnapshotPathParam(r, lrepository, "snapshot_path")
-	if err != nil {
-		return err
-	}
-
-	queryStr := r.URL.Query().Get("q")
-
-	offset, _, err := QueryParamToInt64(r, "offset")
-	if err != nil {
-		return err
-	}
-
-	limit, _, err := QueryParamToInt64(r, "limit")
-	if err != nil {
-		return err
-	}
-
-	snap, err := snapshot.Load(lrepository, snapshotID32)
-	if err != nil {
-		return err
-	}
-
-	results, err := snap.Search(path, queryStr)
-	if err != nil {
-		return err
-	}
-
-	items := Items[search.FileEntry]{
-		Total: 0,
-		Items: make([]search.FileEntry, 0),
-	}
-	i := int64(0)
-	for result := range results {
-		if i >= offset {
-			if limit != 0 {
-				if i >= limit+offset {
-					break
-				}
-			}
-			if entry, isFilename := result.(search.FileEntry); isFilename {
-				items.Total += 1
-				items.Items = append(items.Items, entry)
-			}
-		}
-		i++
-	}
-
-	return json.NewEncoder(w).Encode(items)
-}
-
 type DownloadItem struct {
 	Pathname string `json:"pathname"`
 }
@@ -543,8 +491,8 @@ func snapshotVFSDownloaderSigned(w http.ResponseWriter, r *http.Request) error {
 	default:
 		return &ApiError{
 			HttpCode: 400,
-			ErrCode: "unknown-archive-format",
-			Message: "Unknown Archive Format",
+			ErrCode:  "unknown-archive-format",
+			Message:  "Unknown Archive Format",
 		}
 	}
 

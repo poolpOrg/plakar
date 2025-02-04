@@ -140,8 +140,8 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 						}
 
 						// if snapshot root is a file, then reset to the parent directory
-						if snap.Header.Importer.Directory == record.Pathname {
-							snap.Header.Importer.Directory = filepath.Dir(record.Pathname)
+						if snap.Header.GetSource(0).Importer.Directory == record.Pathname {
+							snap.Header.GetSource(0).Importer.Directory = filepath.Dir(record.Pathname)
 						}
 					} else {
 						atomic.AddUint64(&nDirectories, +1)
@@ -189,12 +189,12 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 	}
 	defer cf.Close()
 
-	snap.Header.Importer.Origin = imp.Origin()
-	snap.Header.Importer.Type = imp.Type()
+	snap.Header.GetSource(0).Importer.Origin = imp.Origin()
+	snap.Header.GetSource(0).Importer.Type = imp.Type()
 	snap.Header.Tags = append(snap.Header.Tags, options.Tags...)
 
 	if options.Name == "" {
-		snap.Header.Name = scanDir + " @ " + snap.Header.Importer.Origin
+		snap.Header.Name = scanDir + " @ " + snap.Header.GetSource(0).Importer.Origin
 	} else {
 		snap.Header.Name = options.Name
 	}
@@ -208,7 +208,7 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 	} else {
 		scanDir = imp.Root()
 	}
-	snap.Header.Importer.Directory = scanDir
+	snap.Header.GetSource(0).Importer.Directory = scanDir
 
 	maxConcurrency := options.MaxConcurrency
 	if maxConcurrency == 0 {
@@ -565,11 +565,11 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 		return backupCtx.abortedReason
 	}
 
-	snap.Header.Root = rootcsum
+	snap.Header.GetSource(0).VFS = rootcsum
 	//snap.Header.Metadata = metadataChecksum
 	snap.Header.Duration = time.Since(beginTime)
-	snap.Header.Summary = *rootSummary
-	snap.Header.Errors = errcsum
+	snap.Header.GetSource(0).Summary = *rootSummary
+	snap.Header.GetSource(0).Errors = errcsum
 
 	/*
 		for _, key := range snap.Metadata.ListKeys() {

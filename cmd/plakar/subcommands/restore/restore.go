@@ -31,13 +31,12 @@ import (
 )
 
 func init() {
-	subcommands.Register("restore", cmd_restore)
+	subcommands.Register("restore", parse_cmd_restore)
 }
 
-func cmd_restore(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_restore(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var pullPath string
 	var pullRebase bool
-	var exporterInstance exporter.Exporter
 	var opt_concurrency uint64
 	var opt_quiet bool
 
@@ -48,21 +47,49 @@ func cmd_restore(ctx *appcontext.AppContext, repo *repository.Repository, args [
 	flags.BoolVar(&opt_quiet, "quiet", false, "do not print progress")
 	flags.Parse(args)
 
-	go eventsProcessorStdio(ctx, opt_quiet)
+	return &Restore{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		Path:               pullPath,
+		Rebase:             pullRebase,
+		Concurrency:        opt_concurrency,
+		Quiet:              opt_quiet,
+		Snapshots:          flags.Args(),
+	}, nil
+}
 
+type Restore struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Path        string
+	Rebase      bool
+	Concurrency uint64
+	Quiet       bool
+	Snapshots   []string
+}
+
+func (cmd *Restore) Name() string {
+	return "restore"
+}
+
+func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	go eventsProcessorStdio(ctx, cmd.Quiet)
+
+	var exporterInstance exporter.Exporter
 	var err error
-	exporterInstance, err = exporter.NewExporter(pullPath)
+	exporterInstance, err = exporter.NewExporter(cmd.Path)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer exporterInstance.Close()
 
 	opts := &snapshot.RestoreOptions{
-		MaxConcurrency: opt_concurrency,
-		Rebase:         pullRebase,
+		MaxConcurrency: cmd.Concurrency,
+		Rebase:         cmd.Rebase,
 	}
 
-	if flags.NArg() == 0 {
+	if len(cmd.Snapshots) == 0 {
 		metadatas, err := utils.GetHeaders(repo, nil)
 		if err != nil {
 			log.Fatal(err)
@@ -70,7 +97,7 @@ func cmd_restore(ctx *appcontext.AppContext, repo *repository.Repository, args [
 
 		for i := len(metadatas); i != 0; i-- {
 			metadata := metadatas[i-1]
-			if ctx.CWD == metadata.Importer.Directory || strings.HasPrefix(ctx.CWD, fmt.Sprintf("%s/", metadata.Importer.Directory)) {
+			if ctx.CWD == metadata.GetSource(0).Importer.Directory || strings.HasPrefix(ctx.CWD, fmt.Sprintf("%s/", metadata.GetSource(0).Importer.Directory)) {
 				snap, err := snapshot.Load(repo, metadata.GetIndexID())
 				if err != nil {
 					return 1, err
@@ -83,16 +110,15 @@ func cmd_restore(ctx *appcontext.AppContext, repo *repository.Repository, args [
 		return 1, fmt.Errorf("could not find a snapshot to restore this path from")
 	}
 
-	snapshots, err := utils.GetSnapshots(repo, flags.Args())
+	snapshots, err := utils.GetSnapshots(repo, cmd.Snapshots)
 	if err != nil {
 		return 1, err
 	}
 
 	for offset, snap := range snapshots {
-		_, pattern := utils.ParseSnapshotID(flags.Args()[offset])
+		_, pattern := utils.ParseSnapshotID(cmd.Snapshots[offset])
 		snap.Restore(exporterInstance, exporterInstance.Root(), pattern, opts)
 		snap.Close()
 	}
-
 	return 0, nil
 }

@@ -31,19 +31,40 @@ import (
 )
 
 func init() {
-	subcommands.Register("locate", cmd_locate)
+	subcommands.Register("locate", parse_cmd_locate)
 }
 
-func cmd_locate(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_locate(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_snapshot string
 
 	flags := flag.NewFlagSet("locate", flag.ExitOnError)
 	flags.StringVar(&opt_snapshot, "snapshot", "", "snapshot to locate in")
 	flags.Parse(args)
 
+	return &Locate{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		Snapshot:           opt_snapshot,
+		Patterns:           flags.Args(),
+	}, nil
+}
+
+type Locate struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Snapshot string
+	Patterns []string
+}
+
+func (cmd *Locate) Name() string {
+	return "locate"
+}
+
+func (cmd *Locate) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	var snapshotIDs []objects.Checksum
-	if opt_snapshot != "" {
-		snapshotIDs = utils.LookupSnapshotByPrefix(repo, opt_snapshot)
+	if cmd.Snapshot != "" {
+		snapshotIDs = utils.LookupSnapshotByPrefix(repo, cmd.Snapshot)
 	} else {
 		var err error
 		snapshotIDs, err = repo.GetSnapshots()
@@ -56,24 +77,24 @@ func cmd_locate(ctx *appcontext.AppContext, repo *repository.Repository, args []
 	for _, snapshotID := range snapshotIDs {
 		snap, err := snapshot.Load(repo, snapshotID)
 		if err != nil {
-			ctx.GetLogger().Error("%s: could not get snapshot: %s", flags.Name(), err)
+			ctx.GetLogger().Error("locate: could not get snapshot: %s", err)
 			return 1, err
 		}
 
 		fs, err := snap.Filesystem()
 		if err != nil {
-			ctx.GetLogger().Error("%s: could not get filesystem: %s", flags.Name(), err)
+			ctx.GetLogger().Error("locate: could not get filesystem: %s", err)
 			snap.Close()
 			return 1, err
 		}
 		for pathname, err := range fs.Pathnames() {
 			if err != nil {
-				ctx.GetLogger().Error("%s: could not get pathname: %s", flags.Name(), err)
+				ctx.GetLogger().Error("locate: could not get pathname: %s", err)
 				snap.Close()
 				return 1, err
 			}
 
-			for _, pattern := range flags.Args() {
+			for _, pattern := range cmd.Patterns {
 				matched := false
 				if path.Base(pathname) == pattern {
 					matched = true
@@ -81,7 +102,7 @@ func cmd_locate(ctx *appcontext.AppContext, repo *repository.Repository, args []
 				if !matched {
 					matched, err := path.Match(pattern, path.Base(pathname))
 					if err != nil {
-						ctx.GetLogger().Error("%s: could not match pattern: %s", flags.Name(), err)
+						ctx.GetLogger().Error("locate: could not match pattern: %s", err)
 						snap.Close()
 						return 1, err
 					}
@@ -90,11 +111,9 @@ func cmd_locate(ctx *appcontext.AppContext, repo *repository.Repository, args []
 					}
 				}
 				fmt.Fprintf(os.Stdout, "%x:%s\n", snap.Header.Identifier[0:4], pathname)
-
 			}
 		}
 		snap.Close()
 	}
-
 	return 0, nil
 }

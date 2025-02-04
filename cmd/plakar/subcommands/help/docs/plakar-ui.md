@@ -51,7 +51,7 @@ The options are as follows:
 
 Using a custom address and disable automatic browser execution:
 
-	plakar ui -addr localhost:9090 -no-spawn
+	$ plakar ui -addr localhost:9090 -no-spawn
 
 # DIAGNOSTICS
 
@@ -70,4 +70,4 @@ The **plakar ui** utility exits&#160;0 on success, and&#160;&gt;0 if an error oc
 
 plakar(1)
 
-Nixpkgs - November 12, 2024
+Nixpkgs - February 3, 2024

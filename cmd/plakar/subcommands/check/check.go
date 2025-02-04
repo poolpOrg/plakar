@@ -30,10 +30,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("check", cmd_check)
+	subcommands.Register("check", parse_cmd_check)
 }
 
-func cmd_check(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_check(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_concurrency uint64
 	var opt_fastCheck bool
 	var opt_noVerify bool
@@ -46,20 +46,47 @@ func cmd_check(ctx *appcontext.AppContext, repo *repository.Repository, args []s
 	flags.BoolVar(&opt_quiet, "quiet", false, "suppress output")
 	flags.Parse(args)
 
-	go eventsProcessorStdio(ctx, opt_quiet)
+	return &Check{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		Concurrency:        opt_concurrency,
+		FastCheck:          opt_fastCheck,
+		NoVerify:           opt_noVerify,
+		Quiet:              opt_quiet,
+		Snapshots:          flags.Args(),
+	}, nil
+}
+
+type Check struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Concurrency uint64
+	FastCheck   bool
+	NoVerify    bool
+	Quiet       bool
+	Snapshots   []string
+}
+
+func (cmd *Check) Name() string {
+	return "check"
+}
+
+func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	go eventsProcessorStdio(ctx, cmd.Quiet)
 
 	var snapshots []string
-	if flags.NArg() == 0 {
+	if len(cmd.Snapshots) == 0 {
 		for snapshotID := range repo.ListSnapshots() {
 			snapshots = append(snapshots, fmt.Sprintf("%x", snapshotID))
 		}
 	} else {
-		snapshots = flags.Args()
+		snapshots = cmd.Snapshots
 	}
 
 	opts := &snapshot.CheckOptions{
-		MaxConcurrency: opt_concurrency,
-		FastCheck:      opt_fastCheck,
+		MaxConcurrency: cmd.Concurrency,
+		FastCheck:      cmd.FastCheck,
 	}
 
 	failures := false
@@ -70,7 +97,7 @@ func cmd_check(ctx *appcontext.AppContext, repo *repository.Repository, args []s
 			log.Fatal(err)
 		}
 
-		if !opt_noVerify && snap.Header.Identity.Identifier != uuid.Nil {
+		if !cmd.NoVerify && snap.Header.Identity.Identifier != uuid.Nil {
 			if ok, err := snap.Verify(); err != nil {
 				ctx.GetLogger().Warn("%s", err)
 			} else if !ok {

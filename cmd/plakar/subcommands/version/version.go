@@ -29,17 +29,22 @@ import (
 const VERSION = "v0.4.22-alpha"
 
 func init() {
-	subcommands.Register("version", cmd_version)
+	subcommands.Register("version", parse_cmd_version)
 }
 
-func cmd_version(ctx *appcontext.AppContext, _ *repository.Repository, args []string) (int, error) {
+func parse_cmd_version(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("version", flag.ExitOnError)
 	flags.Parse(args)
+	return &Version{}, nil
+}
 
+type Version struct {
+}
+
+func (cmd *Version) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	if !semver.IsValid(VERSION) {
 		return 1, fmt.Errorf("invalid version string: %s", VERSION)
 	}
 	fmt.Println(VERSION)
-
 	return 0, nil
 }

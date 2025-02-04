@@ -25,7 +25,7 @@ This command requires a Linux or Darwin (macOS) environment.
 
 Mount a snapshot to the specified directory:
 
-	plakar mount ~/mnt
+	$ plakar mount ~/mnt
 
 # DIAGNOSTICS
 
@@ -44,4 +44,4 @@ The **plakar mount** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 
 plakar(1)
 
-Nixpkgs - February 1, 2025
+Nixpkgs - February 3, 2025

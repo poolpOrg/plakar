@@ -1,4 +1,4 @@
-.Dd February 1, 2025
+.Dd February 3, 2025
 .Dt PLAKAR-INFO 1
 .Os
 .Sh NAME
@@ -38,27 +38,27 @@ ownership, and custom metadata.
 .Sh EXAMPLES
 Show repository information:
 .Bd -literal -offset indent
-plakar info
+$ plakar info
 .Ed
 .Pp
 Show detailed information for a snapshot:
 .Bd -literal -offset indent
-plakar info snapshot abc123
+$ plakar info snapshot abc123
 .Ed
 .Pp
 List all states in the repository:
 .Bd -literal -offset indent
-plakar info state
+$ plakar info state
 .Ed
 .Pp
 Display a specific object within a snapshot:
 .Bd -literal -offset indent
-plakar info object 1234567890abcdef
+$ plakar info object 1234567890abcdef
 .Ed
 .Pp
 Display filesystem details for a path within a snapshot:
 .Bd -literal -offset indent
-plakar info vfs abc123:/etc/passwd
+$ plakar info vfs abc123:/etc/passwd
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

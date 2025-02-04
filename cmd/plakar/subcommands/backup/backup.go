@@ -33,11 +33,10 @@ import (
 	"github.com/PlakarKorp/plakar/snapshot/importer"
 	"github.com/dustin/go-humanize"
 	"github.com/gobwas/glob"
-	"github.com/google/uuid"
 )
 
 func init() {
-	subcommands.Register("backup", cmd_backup)
+	subcommands.Register("backup", parse_cmd_backup)
 }
 
 type excludeFlags []string
@@ -51,13 +50,13 @@ func (e *excludeFlags) Set(value string) error {
 	return nil
 }
 
-func cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_tags string
 	var opt_excludes string
 	var opt_exclude excludeFlags
 	var opt_concurrency uint64
 	var opt_quiet bool
-	var opt_stdio bool
+	// var opt_stdio bool
 
 	excludes := []glob.Glob{}
 	flags := flag.NewFlagSet("backup", flag.ExitOnError)
@@ -66,7 +65,6 @@ func cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []
 	flags.StringVar(&opt_excludes, "excludes", "", "file containing a list of exclusions")
 	flags.Var(&opt_exclude, "exclude", "file containing a list of exclusions")
 	flags.BoolVar(&opt_quiet, "quiet", false, "suppress output")
-	opt_stdio = true
 	//flags.BoolVar(&opt_stdio, "stdio", false, "output one line per file to stdout instead of the default interactive output")
 	flags.Parse(args)
 
@@ -78,7 +76,7 @@ func cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []
 		fp, err := os.Open(opt_excludes)
 		if err != nil {
 			ctx.GetLogger().Error("%s", err)
-			return 1, err
+			return nil, err
 		}
 		defer fp.Close()
 
@@ -87,17 +85,44 @@ func cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []
 			pattern, err := glob.Compile(scanner.Text())
 			if err != nil {
 				ctx.GetLogger().Error("%s", err)
-				return 1, err
+				return nil, err
 			}
 			excludes = append(excludes, pattern)
 		}
 		if err := scanner.Err(); err != nil {
 			ctx.GetLogger().Error("%s", err)
-			return 1, err
+			return nil, err
 		}
 	}
-	_ = excludes
+	return &Backup{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		Concurrency:        opt_concurrency,
+		Tags:               opt_tags,
+		Excludes:           excludes,
+		Exclude:            opt_exclude,
+		Quiet:              opt_quiet,
+		Path:               flags.Arg(0),
+	}, nil
+}
 
+type Backup struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Concurrency uint64
+	Tags        string
+	Excludes    []glob.Glob
+	Exclude     []string
+	Quiet       bool
+	Path        string
+}
+
+func (cmd *Backup) Name() string {
+	return "backup"
+}
+
+func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	snap, err := snapshot.New(repo)
 	if err != nil {
 		ctx.GetLogger().Error("%s", err)
@@ -106,24 +131,22 @@ func cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []
 	defer snap.Close()
 
 	var tags []string
-	if opt_tags == "" {
+	if cmd.Tags == "" {
 		tags = []string{}
 	} else {
-		tags = []string{opt_tags}
+		tags = []string{cmd.Tags}
 	}
 
 	opts := &snapshot.BackupOptions{
-		MaxConcurrency: opt_concurrency,
+		MaxConcurrency: cmd.Concurrency,
 		Name:           "default",
 		Tags:           tags,
-		Excludes:       excludes,
+		Excludes:       cmd.Excludes,
 	}
 
 	scanDir := ctx.CWD
-	if flags.NArg() == 1 {
-		scanDir = flags.Arg(0)
-	} else if flags.NArg() > 1 {
-		log.Fatal("only one directory pushable")
+	if cmd.Path != "" {
+		scanDir = cmd.Path
 	}
 
 	imp, err := importer.NewImporter(scanDir)
@@ -137,22 +160,18 @@ func cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []
 		}
 	}
 
-	ep := startEventsProcessor(ctx, imp.Root(), opt_stdio, opt_quiet)
+	ep := startEventsProcessor(ctx, imp.Root(), true, cmd.Quiet)
 	if err := snap.Backup(scanDir, imp, opts); err != nil {
 		ep.Close()
 		return 1, fmt.Errorf("failed to create snapshot: %w", err)
 	}
 	ep.Close()
 
-	signedStr := "unsigned"
-	if ctx.Identity != uuid.Nil {
-		signedStr = "signed"
-	}
 	ctx.GetLogger().Info("created %s snapshot %x with root %s of size %s in %s",
-		signedStr,
+		"unsigned",
 		snap.Header.GetIndexShortID(),
-		base64.RawStdEncoding.EncodeToString(snap.Header.Root[:]),
-		humanize.Bytes(snap.Header.Summary.Directory.Size+snap.Header.Summary.Below.Size),
+		base64.RawStdEncoding.EncodeToString(snap.Header.GetSource(0).VFS[:]),
+		humanize.Bytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
 		snap.Header.Duration)
 	return 0, nil
 }

@@ -31,26 +31,45 @@ import (
 )
 
 func init() {
-	subcommands.Register("clone", cmd_clone)
+	subcommands.Register("clone", parse_cmd_clone)
 }
 
-func cmd_clone(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_clone(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("clone", flag.ExitOnError)
 	flags.Parse(args)
 
 	if flags.NArg() != 2 || flags.Arg(0) != "to" {
 		ctx.GetLogger().Error("usage: %s to repository", flags.Name())
-		return 1, fmt.Errorf("usage: %s to repository", flags.Name())
+		return nil, fmt.Errorf("usage: %s to repository", flags.Name())
 	}
 
+	return &Clone{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		Dest:               flags.Arg(1),
+	}, nil
+}
+
+type Clone struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Dest string
+}
+
+func (cmd *Clone) Name() string {
+	return "clone"
+}
+
+func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	sourceStore := repo.Store()
 
 	configuration := sourceStore.Configuration()
 	configuration.RepositoryID = uuid.Must(uuid.NewRandom())
 
-	cloneStore, err := storage.Create(flags.Arg(1), configuration)
+	cloneStore, err := storage.Create(cmd.Dest, configuration)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not create repository: %s\n", flags.Arg(1), err)
+		fmt.Fprintf(os.Stderr, "%s: could not create repository: %s\n", cmd.Dest, err)
 		return 1, err
 	}
 

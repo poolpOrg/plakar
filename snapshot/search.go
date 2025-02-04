@@ -264,35 +264,3 @@ func (snap *Snapshot) search(fs *vfs.Filesystem, prefix string, q search.Query, 
 	}
 	return nil
 }
-
-func (snap *Snapshot) Search(prefix string, query string) (chan search.Result, error) {
-	c := make(chan search.Result)
-
-	go func() {
-		defer close(c)
-		fs, err := snap.Filesystem()
-		if err != nil {
-			c <- search.Error{Message: err.Error()}
-			return
-		}
-
-		if !strings.HasSuffix(prefix, "/") {
-			prefix = prefix + "/"
-		}
-
-		q, err := search.Parse(query)
-		if err != nil {
-			c <- search.Error{Message: err.Error()}
-			return
-		}
-
-		err = snap.search(fs, prefix, *q, c)
-		if err != nil {
-			c <- search.Error{Message: err.Error()}
-			return
-		}
-
-	}()
-
-	return c, nil
-}

@@ -18,7 +18,7 @@ func (snapshot *Snapshot) Errors(beneath string) (iter.Seq2[ErrorItem, error], e
 		beneath += "/"
 	}
 
-	rd, err := snapshot.repository.GetBlob(packfile.TYPE_ERROR, snapshot.Header.Errors)
+	rd, err := snapshot.repository.GetBlob(packfile.TYPE_ERROR, snapshot.Header.GetSource(0).Errors)
 	if err != nil {
 		return nil, err
 	}

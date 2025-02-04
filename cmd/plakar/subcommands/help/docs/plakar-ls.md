@@ -41,23 +41,23 @@ The options are as follows:
 
 List all snapshots with their short IDs:
 
-	plakar ls
+	$ plakar ls
 
 List all snapshots with UUIDs instead of short IDs:
 
-	plakar ls -uuid
+	$ plakar ls -uuid
 
 List snapshots with a specific tag:
 
-	plakar ls -tag "backup"
+	$ plakar ls -tag daily-backup
 
 List contents of a specific snapshot:
 
-	plakar ls abc123
+	$ plakar ls abc123
 
 Recursively list contents of a specific snapshot:
 
-	plakar ls -recursive abc123:/etc
+	$ plakar ls -recursive abc123:/etc
 
 # DIAGNOSTICS
 
@@ -76,4 +76,4 @@ The **plakar ls** utility exits&#160;0 on success, and&#160;&gt;0 if an error oc
 
 plakar(1)
 
-Nixpkgs - February 1, 2025
+Nixpkgs - February 3, 2025

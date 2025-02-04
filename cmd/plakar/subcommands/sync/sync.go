@@ -37,29 +37,47 @@ import (
 )
 
 func init() {
-	subcommands.Register("sync", cmd_sync)
+	subcommands.Register("sync", parse_cmd_sync)
 }
 
-func cmd_sync(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_sync(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("sync", flag.ExitOnError)
 	flags.Parse(args)
+	return &Sync{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		Args:               flags.Args(),
+	}, nil
+}
 
+type Sync struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Args []string
+}
+
+func (cmd *Sync) Name() string {
+	return "sync"
+}
+
+func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	syncSnapshotID := ""
 	direction := ""
 	peerRepositoryPath := ""
-	switch flags.NArg() {
+	switch len(cmd.Args) {
 	case 2:
-		direction = flags.Arg(0)
-		peerRepositoryPath = flags.Arg(1)
+		direction = cmd.Args[0]
+		peerRepositoryPath = cmd.Args[1]
 
 	case 3:
-		syncSnapshotID = flags.Arg(0)
-		direction = flags.Arg(1)
-		peerRepositoryPath = flags.Arg(2)
+		syncSnapshotID = cmd.Args[0]
+		direction = cmd.Args[1]
+		peerRepositoryPath = cmd.Args[2]
 
 	default:
-		ctx.GetLogger().Error("usage: %s [snapshotID] to|from repository", flags.Name())
-		return 1, fmt.Errorf("usage: %s [snapshotID] to|from repository", flags.Name())
+		ctx.GetLogger().Error("usage: sync [snapshotID] to|from repository")
+		return 1, fmt.Errorf("usage: sync [snapshotID] to|from repository")
 	}
 
 	peerStore, err := storage.Open(peerRepositoryPath)
@@ -181,7 +199,6 @@ func cmd_sync(ctx *appcontext.AppContext, repo *repository.Repository, args []st
 			}
 		}
 	}
-
 	return 0, nil
 }
 

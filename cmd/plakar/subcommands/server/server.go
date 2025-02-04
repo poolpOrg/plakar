@@ -26,10 +26,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("server", cmd_server)
+	subcommands.Register("server", parse_cmd_server)
 }
 
-func cmd_server(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_server(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_listen string
 	var opt_allowdelete bool
 
@@ -42,7 +42,28 @@ func cmd_server(ctx *appcontext.AppContext, repo *repository.Repository, args []
 	if opt_allowdelete {
 		noDelete = false
 	}
+	return &Server{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
 
-	httpd.Server(repo, opt_listen, noDelete)
+		ListenAddr: opt_listen,
+		NoDelete:   noDelete,
+	}, nil
+}
+
+type Server struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	ListenAddr string
+	NoDelete   bool
+}
+
+func (cmd *Server) Name() string {
+	return "server"
+}
+
+func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	httpd.Server(repo, cmd.ListenAddr, cmd.NoDelete)
 	return 0, nil
 }

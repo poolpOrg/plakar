@@ -33,22 +33,38 @@ import (
 )
 
 func init() {
-	subcommands.Register("mount", cmd_mount)
+	subcommands.Register("mount", parse_cmd_mount)
 }
 
-func cmd_mount(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_mount(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("mount", flag.ExitOnError)
 	flags.Parse(args)
 
 	if flags.NArg() != 1 {
 		ctx.GetLogger().Error("need mountpoint")
-		return 1, fmt.Errorf("need mountpoint")
+		return nil, fmt.Errorf("need mountpoint")
 	}
+	return &Mount{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		Mountpoint:         flags.Arg(0),
+	}, nil
+}
 
-	mountpoint := flags.Arg(0)
+type Mount struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
 
+	Mountpoint string
+}
+
+func (cmd *Mount) Name() string {
+	return "mount"
+}
+
+func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	c, err := fuse.Mount(
-		mountpoint,
+		cmd.Mountpoint,
 		fuse.FSName("plakar"),
 		fuse.Subtype("plakarfs"),
 		fuse.LocalVolume(),
@@ -57,9 +73,9 @@ func cmd_mount(ctx *appcontext.AppContext, repo *repository.Repository, args []s
 		log.Fatalf("Mount: %v", err)
 	}
 	defer c.Close()
-	ctx.GetLogger().Info("mounted repository %s at %s", repo.Location(), mountpoint)
+	ctx.GetLogger().Info("mounted repository %s at %s", repo.Location(), cmd.Mountpoint)
 
-	err = fs.Serve(c, plakarfs.NewFS(repo, mountpoint))
+	err = fs.Serve(c, plakarfs.NewFS(repo, cmd.Mountpoint))
 	if err != nil {
 		return 1, err
 	}
@@ -68,4 +84,5 @@ func cmd_mount(ctx *appcontext.AppContext, repo *repository.Repository, args []s
 		return 1, err
 	}
 	return 0, nil
+
 }

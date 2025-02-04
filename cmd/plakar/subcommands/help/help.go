@@ -33,16 +33,34 @@ import (
 var docs embed.FS
 
 func init() {
-	subcommands.Register("help", cmd_help)
+	subcommands.Register("help", parse_cmd_help)
 }
 
-func cmd_help(ctx *appcontext.AppContext, _ *repository.Repository, args []string) (int, error) {
+func parse_cmd_help(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_style string
 	flags := flag.NewFlagSet("help", flag.ExitOnError)
 	flags.StringVar(&opt_style, "style", "dracula", "style to use")
 	flags.Parse(args)
 
-	if len(flags.Args()) == 0 {
+	command := ""
+	if flags.NArg() > 0 {
+		command = flags.Arg(0)
+	}
+
+	return &Help{
+		Style:   opt_style,
+		Command: command,
+	}, nil
+
+}
+
+type Help struct {
+	Style   string
+	Command string
+}
+
+func (cmd *Help) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	if cmd.Command == "" {
 		fmt.Fprintf(os.Stderr, "available commands:\n")
 		for _, command := range subcommands.List() {
 			fmt.Fprintf(os.Stderr, "  %s\n", command)
@@ -50,14 +68,14 @@ func cmd_help(ctx *appcontext.AppContext, _ *repository.Repository, args []strin
 		return 0, nil
 	}
 
-	content, err := docs.ReadFile(fmt.Sprintf("docs/plakar-%s.md", flags.Args()[0]))
+	content, err := docs.ReadFile(fmt.Sprintf("docs/plakar-%s.md", cmd.Command))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "unknown command: %s\n", flags.Args()[0])
+		fmt.Fprintf(os.Stderr, "unknown command: %s\n", cmd.Command)
 		return 1, err
 	}
 
 	r, err := glamour.NewTermRenderer(
-		glamour.WithStandardStyle(opt_style),
+		glamour.WithStandardStyle(cmd.Style),
 		glamour.WithColorProfile(termenv.TrueColor),
 	)
 	if err != nil {

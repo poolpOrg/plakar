@@ -25,13 +25,29 @@ import (
 )
 
 func init() {
-	subcommands.Register("cleanup", cmd_cleanup)
+	subcommands.Register("cleanup", parse_cmd_cleanup)
 }
 
-func cmd_cleanup(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_cleanup(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("cleanup", flag.ExitOnError)
 	flags.Parse(args)
 
+	return &Cleanup{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+	}, nil
+}
+
+type Cleanup struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+}
+
+func (cmd *Cleanup) Name() string {
+	return "cleanup"
+}
+
+func (cmd *Cleanup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	// the cleanup algorithm is a bit tricky and needs to be done in the correct sequence,
 	// here's what it has to do:
 	//
@@ -42,6 +58,5 @@ func cmd_cleanup(ctx *appcontext.AppContext, repo *repository.Repository, args [
 	// 5. decide which one keeps it and a new packfile has to be generated for the other that contains everything BUT the object/chunk
 	// 6. update indexes to reflect the new packfile
 	// 7. save the new index
-
 	return 0, nil
 }

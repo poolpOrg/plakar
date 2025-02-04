@@ -39,11 +39,11 @@ The options are as follows:
 
 Calculate the checksum of a file within a snapshot:
 
-	plakar checksum abc123:/path/to/file.txt
+	$ plakar checksum abc123:/etc/passwd
 
 Retrieve the pre-recorded checksum for faster output:
 
-	plakar checksum -fast abc123:/path/to/file.txt
+	$ plakar checksum -fast abc123:/etc/netstart
 
 # DIAGNOSTICS
 
@@ -62,4 +62,4 @@ The **plakar checksum** utility exits&#160;0 on success, and&#160;&gt;0 if an er
 
 plakar(1)
 
-Nixpkgs - January 28, 2025
+Nixpkgs - February 3, 2025

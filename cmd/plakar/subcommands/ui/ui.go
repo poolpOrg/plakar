@@ -32,10 +32,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("ui", cmd_ui)
+	subcommands.Register("ui", parse_cmd_ui)
 }
 
-func cmd_ui(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_ui(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_addr string
 	var opt_cors bool
 	var opt_noauth bool
@@ -48,21 +48,45 @@ func cmd_ui(ctx *appcontext.AppContext, repo *repository.Repository, args []stri
 	flags.BoolVar(&opt_nospawn, "no-spawn", false, "don't spawn browser")
 	flags.Parse(args)
 
+	return &Ui{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		Addr:               opt_addr,
+		Cors:               opt_cors,
+		NoAuth:             opt_noauth,
+		NoSpawn:            opt_nospawn,
+	}, nil
+}
+
+type Ui struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Addr    string
+	Cors    bool
+	NoAuth  bool
+	NoSpawn bool
+}
+
+func (cmd *Ui) Name() string {
+	return "ui"
+}
+
+func (cmd *Ui) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	ui_opts := v2.UiOptions{
-		NoSpawn: opt_nospawn,
-		Cors:    opt_cors,
+		NoSpawn: cmd.NoSpawn,
+		Cors:    cmd.Cors,
 		Token:   "",
 	}
 
-	if !opt_noauth {
+	if !cmd.NoAuth {
 		ui_opts.Token = uuid.NewString()
 	}
 
-	err := v2.Ui(repo, opt_addr, &ui_opts)
+	err := v2.Ui(repo, cmd.Addr, &ui_opts)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %s: %s\n", flag.CommandLine.Name(), flags.Name(), err)
+		fmt.Fprintf(os.Stderr, "ui: %s\n", err)
 		return 1, err
 	}
-
 	return 0, err
 }

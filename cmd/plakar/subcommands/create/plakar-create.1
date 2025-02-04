@@ -1,4 +1,4 @@
-.Dd February 1, 2025
+.Dd February 3, 2025
 .Dt PLAKAR-CREATE 1
 .Os
 .Sh NAME
@@ -31,16 +31,6 @@ If specified, the repository will not use compression.
 .It Ev PLAKAR_PASSPHRASE
 Repository encryption password.
 .El
-.Sh EXAMPLES
-Create a new repository with default settings:
-.Bd -literal -offset indent
-plakar create
-.Ed
-.Pp
-Create a new repository without encryption:
-.Bd -literal -offset indent
-plakar create -no-encryption /path/to/repo
-.Ed
 .Sh DIAGNOSTICS
 .Ex -std
 .Bl -tag -width Ds

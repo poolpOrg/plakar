@@ -44,19 +44,19 @@ The arguments are as follows:
 
 Remove a specific snapshot by ID:
 
-	plakar rm abc123
+	$ plakar rm abc123
 
 Remove snapshots older than 30 days:
 
-	plakar rm -older "30d"
+	$ plakar rm -older 30d
 
 Remove snapshots with a specific tag:
 
-	plakar rm -tag "backup"
+	$ plakar rm -tag daily-backup
 
 Remove snapshots older than 1 year with a specific tag:
 
-	plakar rm -older "1y" -tag "archive"
+	$ plakar rm -older 1y -tag daily-backup
 
 # DIAGNOSTICS
 
@@ -76,4 +76,4 @@ The **plakar rm** utility exits&#160;0 on success, and&#160;&gt;0 if an error oc
 plakar(1),
 plakar-backup(1)
 
-Nixpkgs - January 28, 2025
+Nixpkgs - February 3, 2025

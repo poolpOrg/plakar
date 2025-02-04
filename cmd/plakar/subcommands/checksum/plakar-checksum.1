@@ -1,4 +1,4 @@
-.Dd January 28, 2025
+.Dd February 3, 2025
 .Dt PLAKAR-CHECKSUM 1
 .Os
 .Sh NAME
@@ -34,12 +34,12 @@ contents.
 .Sh EXAMPLES
 Calculate the checksum of a file within a snapshot:
 .Bd -literal -offset indent
-plakar checksum abc123:/path/to/file.txt
+$ plakar checksum abc123:/etc/passwd
 .Ed
 .Pp
 Retrieve the pre-recorded checksum for faster output:
 .Bd -literal -offset indent
-plakar checksum -fast abc123:/path/to/file.txt
+$ plakar checksum -fast abc123:/etc/netstart
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

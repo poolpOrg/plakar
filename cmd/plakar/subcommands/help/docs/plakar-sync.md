@@ -46,17 +46,9 @@ The arguments are as follows:
 
 # EXAMPLES
 
-Basic synchronization from local to peer repository:
-
-	plakar sync to /path/to/peer/repo
-
-Synchronize specific snapshot to peer repository:
-
-	plakar sync abc123 to /path/to/peer/repo
-
 Bi-directional synchronization with peer repository:
 
-	plakar sync with /path/to/peer/repo
+	$ plakar sync with /path/to/peer/repo
 
 # DIAGNOSTICS
 

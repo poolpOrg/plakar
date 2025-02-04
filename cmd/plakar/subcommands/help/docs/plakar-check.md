@@ -52,11 +52,11 @@ The options are as follows:
 
 Perform a full integrity check on all snapshots:
 
-	plakar check
+	$ plakar check
 
 Perform a fast check on specific paths of two snapshot:
 
-	plakar check -fast abc123:/etc/passwd def456:/var/www
+	$ plakar check -fast abc123:/etc/passwd def456:/var/www
 
 # DIAGNOSTICS
 
@@ -75,4 +75,4 @@ The **plakar check** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 
 plakar(1)
 
-Nixpkgs - January 29, 2025
+Nixpkgs - February 3, 2025

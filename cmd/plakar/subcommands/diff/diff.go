@@ -35,10 +35,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("diff", cmd_diff)
+	subcommands.Register("diff", parse_cmd_diff)
 }
 
-func cmd_diff(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_diff(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_highlight bool
 	flags := flag.NewFlagSet("diff", flag.ExitOnError)
 	flags.BoolVar(&opt_highlight, "highlight", false, "highlight output")
@@ -52,23 +52,53 @@ func cmd_diff(ctx *appcontext.AppContext, repo *repository.Repository, args []st
 	snapshotPrefix1, pathname1 := utils.ParseSnapshotID(flags.Arg(0))
 	snapshotPrefix2, pathname2 := utils.ParseSnapshotID(flags.Arg(1))
 
-	snap1, err := utils.OpenSnapshotByPrefix(repo, snapshotPrefix1)
+	return &Diff{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		Highlight:          opt_highlight,
+		SnapshotPrefix1:    snapshotPrefix1,
+		Pathname1:          pathname1,
+		SnapshotPrefix2:    snapshotPrefix2,
+		Pathname2:          pathname2,
+	}, nil
+}
+
+type Diff struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Highlight       bool
+	SnapshotPrefix1 string
+	Pathname1       string
+	SnapshotPrefix2 string
+	Pathname2       string
+}
+
+func (cmd *Diff) Name() string {
+	return "diff"
+}
+
+func (cmd *Diff) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	pathname1 := cmd.Pathname1
+	pathname2 := cmd.Pathname2
+
+	snap1, err := utils.OpenSnapshotByPrefix(repo, cmd.SnapshotPrefix1)
 	if err != nil {
-		log.Fatalf("%s: could not open snapshot: %s", flag.CommandLine.Name(), snapshotPrefix1)
+		return 1, fmt.Errorf("diff: could not open snapshot: %s", cmd.SnapshotPrefix1)
 	}
 	defer snap1.Close()
 
-	snap2, err := utils.OpenSnapshotByPrefix(repo, snapshotPrefix2)
+	snap2, err := utils.OpenSnapshotByPrefix(repo, cmd.SnapshotPrefix2)
 	if err != nil {
-		log.Fatalf("%s: could not open snapshot: %s", flag.CommandLine.Name(), snapshotPrefix2)
+		return 1, fmt.Errorf("diff: could not open snapshot: %s", cmd.SnapshotPrefix2)
 	}
 	defer snap2.Close()
 
 	var diff string
 	if pathname1 == "" && pathname2 == "" {
-		diff, err = diff_filesystems(snap1, snap2)
+		diff, err = diff_filesystems(ctx, snap1, snap2)
 		if err != nil {
-			log.Fatalf("%s: could not diff snapshots: %s", flag.CommandLine.Name(), err)
+			return 1, fmt.Errorf("diff: could not diff snapshots: %w", err)
 		}
 	} else {
 		if pathname1 == "" {
@@ -77,24 +107,24 @@ func cmd_diff(ctx *appcontext.AppContext, repo *repository.Repository, args []st
 		if pathname2 == "" {
 			pathname2 = pathname1
 		}
-		diff, err = diff_pathnames(snap1, pathname1, snap2, pathname2)
+		diff, err = diff_pathnames(ctx, snap1, pathname1, snap2, pathname2)
 		if err != nil {
-			log.Fatalf("%s: could not diff pathnames: %s", flag.CommandLine.Name(), err)
+			return 1, fmt.Errorf("diff: could not diff pathnames: %w", err)
 		}
 	}
 
-	if opt_highlight {
+	if cmd.Highlight {
 		err = quick.Highlight(os.Stdout, diff, "diff", "terminal", "dracula")
 		if err != nil {
-			log.Fatalf("%s: could not highlight diff: %s", flag.CommandLine.Name(), err)
+			return 1, fmt.Errorf("diff: could not highlight diff: %w", err)
 		}
 	} else {
-		fmt.Printf("%s", diff)
+		fmt.Fprintf(ctx.Stdout, "%s", diff)
 	}
 	return 0, nil
 }
 
-func diff_filesystems(snap1 *snapshot.Snapshot, snap2 *snapshot.Snapshot) (string, error) {
+func diff_filesystems(ctx *appcontext.AppContext, snap1 *snapshot.Snapshot, snap2 *snapshot.Snapshot) (string, error) {
 	vfs1, err := snap1.Filesystem()
 	if err != nil {
 		return "", err
@@ -113,10 +143,10 @@ func diff_filesystems(snap1 *snapshot.Snapshot, snap2 *snapshot.Snapshot) (strin
 		return "", err
 	}
 
-	return diff_directories(f1, f2)
+	return diff_directories(ctx, f1, f2)
 }
 
-func diff_pathnames(snap1 *snapshot.Snapshot, pathname1 string, snap2 *snapshot.Snapshot, pathname2 string) (string, error) {
+func diff_pathnames(ctx *appcontext.AppContext, snap1 *snapshot.Snapshot, pathname1 string, snap2 *snapshot.Snapshot, pathname2 string) (string, error) {
 	vfs1, err := snap1.Filesystem()
 	if err != nil {
 		return "", err
@@ -136,23 +166,23 @@ func diff_pathnames(snap1 *snapshot.Snapshot, pathname1 string, snap2 *snapshot.
 	}
 
 	if f1.Stat().IsDir() && f2.Stat().IsDir() {
-		return diff_directories(f1, f2)
+		return diff_directories(ctx, f1, f2)
 	}
 
 	if f1.Stat().IsDir() || f2.Stat().IsDir() {
 		return "", fmt.Errorf("can't diff different file types")
 	}
 
-	return diff_files(snap1, f1, snap2, f2)
+	return diff_files(ctx, snap1, f1, snap2, f2)
 }
 
-func diff_directories(dirEntry1 *vfs.Entry, dirEntry2 *vfs.Entry) (string, error) {
+func diff_directories(ctx *appcontext.AppContext, dirEntry1 *vfs.Entry, dirEntry2 *vfs.Entry) (string, error) {
 	return "", fmt.Errorf("not implemented yet")
 }
 
-func diff_files(snap1 *snapshot.Snapshot, fileEntry1 *vfs.Entry, snap2 *snapshot.Snapshot, fileEntry2 *vfs.Entry) (string, error) {
+func diff_files(ctx *appcontext.AppContext, snap1 *snapshot.Snapshot, fileEntry1 *vfs.Entry, snap2 *snapshot.Snapshot, fileEntry2 *vfs.Entry) (string, error) {
 	if fileEntry1.Object.Checksum == fileEntry2.Object.Checksum {
-		fmt.Printf("%s:%s and %s:%s are identical\n",
+		fmt.Fprintf(ctx.Stdout, "%s:%s and %s:%s are identical\n",
 			fmt.Sprintf("%x", snap1.Header.GetIndexShortID()), path.Join(fileEntry1.ParentPath, fileEntry1.Stat().Name()),
 			fmt.Sprintf("%x", snap2.Header.GetIndexShortID()), path.Join(fileEntry2.ParentPath, fileEntry2.Stat().Name()))
 		return "", nil

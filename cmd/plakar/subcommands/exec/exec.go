@@ -31,19 +31,39 @@ import (
 )
 
 func init() {
-	subcommands.Register("exec", cmd_exec)
+	subcommands.Register("exec", parse_cmd_exec)
 }
 
-func cmd_exec(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_exec(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("exec", flag.ExitOnError)
 	flags.Parse(args)
 
 	if flags.NArg() == 0 {
 		ctx.GetLogger().Error("%s: at least one parameters is required", flags.Name())
-		return 1, fmt.Errorf("at least one parameters is required")
+		return nil, fmt.Errorf("at least one parameters is required")
 	}
+	return &Exec{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		SnapshotPrefix:     flags.Arg(0),
+		Args:               flags.Args()[1:],
+	}, nil
+}
 
-	snapshots, err := utils.GetSnapshots(repo, []string{flags.Args()[0]})
+type Exec struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	SnapshotPrefix string
+	Args           []string
+}
+
+func (cmd *Exec) Name() string {
+	return "exec"
+}
+
+func (cmd *Exec) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	snapshots, err := utils.GetSnapshots(repo, []string{cmd.SnapshotPrefix})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,11 +73,11 @@ func cmd_exec(ctx *appcontext.AppContext, repo *repository.Repository, args []st
 	snap := snapshots[0]
 	defer snap.Close()
 
-	_, pathname := utils.ParseSnapshotID(flags.Args()[0])
+	_, pathname := utils.ParseSnapshotID(cmd.SnapshotPrefix)
 
 	rd, err := snap.NewReader(pathname)
 	if err != nil {
-		ctx.GetLogger().Error("%s: %s: failed to open: %s", flags.Name(), pathname, err)
+		ctx.GetLogger().Error("exec: %s: failed to open: %s", pathname, err)
 		return 1, err
 	}
 	defer rd.Close()
@@ -75,8 +95,8 @@ func cmd_exec(ctx *appcontext.AppContext, repo *repository.Repository, args []st
 	}
 	file.Close()
 
-	cmd := exec.Command(file.Name(), flags.Args()[1:]...)
-	stdin, err := cmd.StdinPipe()
+	p := exec.Command(file.Name(), cmd.Args...)
+	stdin, err := p.StdinPipe()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,7 +105,7 @@ func cmd_exec(ctx *appcontext.AppContext, repo *repository.Repository, args []st
 		io.Copy(stdin, os.Stdin)
 	}()
 
-	stdout, err := cmd.StdoutPipe()
+	stdout, err := p.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -94,7 +114,7 @@ func cmd_exec(ctx *appcontext.AppContext, repo *repository.Repository, args []st
 		io.Copy(os.Stdout, stdout)
 	}()
 
-	stderr, err := cmd.StderrPipe()
+	stderr, err := p.StderrPipe()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -102,9 +122,9 @@ func cmd_exec(ctx *appcontext.AppContext, repo *repository.Repository, args []st
 		defer stdout.Close()
 		io.Copy(os.Stderr, stderr)
 	}()
-	if cmd.Start() == nil {
-		cmd.Wait()
-		return cmd.ProcessState.ExitCode(), nil
+	if p.Start() == nil {
+		p.Wait()
+		return p.ProcessState.ExitCode(), nil
 	}
 	return 1, err
 }

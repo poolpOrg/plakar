@@ -60,15 +60,15 @@ The options are as follows:
 
 Create a tarball of the entire snapshot:
 
-	plakar archive -output backup.tar.gz -format tarball abc123
+	$ plakar archive -output backup.tar.gz -format tarball abc123
 
 Create a zip archive of a specific directory within a snapshot:
 
-	plakar archive -output dir.zip -format zip abc123:/var/www
+	$ plakar archive -output dir.zip -format zip abc123:/var/www
 
 Archive with rebasing to remove directory structure:
 
-	plakar archive -rebase -format tar abc123
+	$ plakar archive -rebase -format tar abc123
 
 # DIAGNOSTICS
 
@@ -88,4 +88,4 @@ The **plakar archive** utility exits&#160;0 on success, and&#160;&gt;0 if an err
 plakar(1),
 plakar-backup(1)
 
-Nixpkgs - January 29, 2025
+Nixpkgs - February 3, 2025

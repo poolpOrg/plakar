@@ -1,4 +1,4 @@
-.Dd February 1, 2025
+.Dd February 3, 2025
 .Dt PLAKAR-LS 1
 .Os
 .Sh NAME
@@ -32,27 +32,27 @@ List directory contents recursively when exploring snapshot contents.
 .Sh EXAMPLES
 List all snapshots with their short IDs:
 .Bd -literal -offset indent
-plakar ls
+$ plakar ls
 .Ed
 .Pp
 List all snapshots with UUIDs instead of short IDs:
 .Bd -literal -offset indent
-plakar ls -uuid
+$ plakar ls -uuid
 .Ed
 .Pp
 List snapshots with a specific tag:
 .Bd -literal -offset indent
-plakar ls -tag "backup"
+$ plakar ls -tag daily-backup
 .Ed
 .Pp
 List contents of a specific snapshot:
 .Bd -literal -offset indent
-plakar ls abc123
+$ plakar ls abc123
 .Ed
 .Pp
 Recursively list contents of a specific snapshot:
 .Bd -literal -offset indent
-plakar ls -recursive abc123:/etc
+$ plakar ls -recursive abc123:/etc
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

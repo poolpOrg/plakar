@@ -123,7 +123,6 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, token strin
 	server.Handle("GET /api/snapshot/reader/{snapshot_path...}", urlSigner.VerifyMiddleware(APIView(snapshotReader)))
 	server.Handle("POST /api/snapshot/reader-sign-url/{snapshot_path...}", authToken(APIView(urlSigner.Sign)))
 
-	server.Handle("GET /api/snapshot/search/{snapshot_path...}", authToken(APIView(snapshotSearch)))
 	server.Handle("GET /api/snapshot/vfs/{snapshot_path...}", authToken(APIView(snapshotVFSBrowse)))
 	server.Handle("GET /api/snapshot/vfs/children/{snapshot_path...}", authToken(APIView(snapshotVFSChildren)))
 	server.Handle("GET /api/snapshot/vfs/errors/{snapshot_path...}", authToken(APIView(snapshotVFSErrors)))

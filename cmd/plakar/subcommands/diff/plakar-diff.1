@@ -1,4 +1,4 @@
-.Dd January 29, 2025
+.Dd February 3, 2025
 .Dt PLAKAR-DIFF 1
 .Os
 .Sh NAME
@@ -29,14 +29,14 @@ Apply syntax highlighting to the diff output for readability.
 .Sh EXAMPLES
 Compare root directories of two snapshots:
 .Bd -literal -offset indent
-plakar diff abc123 def456
+$ plakar diff abc123 def456
 .Ed
 .Pp
 Compare
 across snapshots with highlighting:
 .Pa /etc/passwd
 .Bd -literal -offset indent
-plakar diff -highlight abc123:/etc/passwd def456:/etc/passwd
+$ plakar diff -highlight abc123:/etc/passwd def456:/etc/passwd
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

@@ -62,15 +62,15 @@ The options are as follows:
 
 Create a snapshot of the current directory with a tag:
 
-	plakar backup -tag "daily_backup"
+	$ plakar backup -tag daily-backup
 
 Backup a specific directory with exclusion patterns from a file:
 
-	plakar backup -excludes /path/to/exclude_file /path/to/directory
+	$ plakar backup -excludes ~/my-excludes-file /var/www
 
 Backup a directory with specific file exclusions:
 
-	plakar backup -exclude "*.tmp" -exclude "*.log" /path/to/directory
+	$ plakar backup -exclude "*.tmp" -exclude "*.log" /var/www
 
 # DIAGNOSTICS
 
@@ -89,4 +89,4 @@ The **plakar backup** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 
 plakar(1)
 
-Nixpkgs - January 29, 2025
+Nixpkgs - February 3, 2025

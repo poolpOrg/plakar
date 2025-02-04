@@ -17,7 +17,7 @@
 package mount
 
 import (
-	"flag"
+	"fmt"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
@@ -25,14 +25,9 @@ import (
 )
 
 func init() {
-	subcommands.Register("mount", cmd_mount)
+	subcommands.Register("mount", parse_cmd_mount)
 }
 
-func cmd_mount(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
-	flags := flag.NewFlagSet("mount", flag.ExitOnError)
-	flags.Parse(args)
-
-	ctx.GetLogger().Warn("%s not supported on %s",
-		flags.Arg(0), ctx.OperatingSystem)
-	return 1, nil
+func parse_cmd_mount(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
+	return nil, fmt.Errorf("mount not supported on %s", ctx.OperatingSystem)
 }

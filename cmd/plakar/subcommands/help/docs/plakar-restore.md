@@ -60,15 +60,15 @@ The options are as follows:
 
 Restore all files from a specific snapshot to the current directory:
 
-	plakar restore abc123
+	$ plakar restore abc123
 
 Restore to a specific directory:
 
-	plakar restore -to /path/to/restore abc123
+	$ plakar restore -to /mnt/ abc123
 
 Restore with rebase option, placing files directly in the target directory:
 
-	plakar restore -rebase -to /path/to/restore abc123
+	$ plakar restore -rebase -to /home/op abc123
 
 # DIAGNOSTICS
 
@@ -88,4 +88,4 @@ The **plakar restore** utility exits&#160;0 on success, and&#160;&gt;0 if an err
 plakar(1),
 plakar-backup(1)
 
-Nixpkgs - January 29, 2025
+Nixpkgs - February 3, 2025

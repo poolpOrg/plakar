@@ -31,10 +31,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("checksum", cmd_checksum)
+	subcommands.Register("checksum", parse_cmd_checksum)
 }
 
-func cmd_checksum(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_checksum(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var enableFastChecksum bool
 
 	flags := flag.NewFlagSet("checksum", flag.ExitOnError)
@@ -44,12 +44,33 @@ func cmd_checksum(ctx *appcontext.AppContext, repo *repository.Repository, args 
 
 	if flags.NArg() == 0 {
 		ctx.GetLogger().Error("%s: at least one parameter is required", flags.Name())
-		return 1, fmt.Errorf("at least one parameter is required")
+		return nil, fmt.Errorf("at least one parameter is required")
 	}
 
-	snapshots, err := utils.GetSnapshots(repo, flags.Args())
+	return &Checksum{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		Fast:               enableFastChecksum,
+		Targets:            flags.Args(),
+	}, nil
+}
+
+type Checksum struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Fast    bool
+	Targets []string
+}
+
+func (cmd *Checksum) Name() string {
+	return "checksum"
+}
+
+func (cmd *Checksum) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	snapshots, err := utils.GetSnapshots(repo, cmd.Targets)
 	if err != nil {
-		ctx.GetLogger().Error("%s: could not obtain snapshots list: %s", flags.Name(), err)
+		ctx.GetLogger().Error("checksum: could not obtain snapshots list: %s", err)
 		return 1, err
 	}
 
@@ -62,15 +83,14 @@ func cmd_checksum(ctx *appcontext.AppContext, repo *repository.Repository, args 
 			continue
 		}
 
-		_, pathname := utils.ParseSnapshotID(flags.Args()[offset])
+		_, pathname := utils.ParseSnapshotID(cmd.Targets[offset])
 		if pathname == "" {
-			ctx.GetLogger().Error("%s: missing filename for snapshot %x", flags.Name(), snap.Header.GetIndexShortID())
+			ctx.GetLogger().Error("checksum: missing filename for snapshot %x", snap.Header.GetIndexShortID())
 			errors++
 			continue
 		}
 
-		displayChecksums(ctx, fs, repo, snap, pathname, enableFastChecksum)
-
+		displayChecksums(ctx, fs, repo, snap, pathname, cmd.Fast)
 	}
 
 	return 0, nil

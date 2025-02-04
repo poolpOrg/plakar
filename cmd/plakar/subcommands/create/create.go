@@ -33,10 +33,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("create", cmd_create)
+	subcommands.Register("create", parse_cmd_create)
 }
 
-func cmd_create(ctx *appcontext.AppContext, _ *repository.Repository, args []string) (int, error) {
+func parse_cmd_create(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_noencryption bool
 	var opt_nocompression bool
 
@@ -45,8 +45,26 @@ func cmd_create(ctx *appcontext.AppContext, _ *repository.Repository, args []str
 	flags.BoolVar(&opt_nocompression, "no-compression", false, "disable transparent compression")
 	flags.Parse(args)
 
+	if flags.NArg() > 1 {
+		return nil, fmt.Errorf("%s: too many parameters", flag.CommandLine.Name())
+	}
+
+	return &Create{
+		NoEncryption:  opt_noencryption,
+		NoCompression: opt_nocompression,
+		Location:      flags.Arg(0),
+	}, nil
+}
+
+type Create struct {
+	NoEncryption  bool
+	NoCompression bool
+	Location      string
+}
+
+func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	storageConfiguration := storage.NewConfiguration()
-	if opt_nocompression {
+	if cmd.NoCompression {
 		storageConfiguration.Compression = nil
 	} else {
 		compressionConfiguration := compression.DefaultConfiguration()
@@ -56,7 +74,7 @@ func cmd_create(ctx *appcontext.AppContext, _ *repository.Repository, args []str
 	hashingConfiguration := hashing.DefaultConfiguration()
 	storageConfiguration.Hashing = *hashingConfiguration
 
-	if !opt_noencryption {
+	if !cmd.NoEncryption {
 		storageConfiguration.Encryption.Algorithm = encryption.DefaultConfiguration().Algorithm
 
 		var passphrase []byte
@@ -104,22 +122,18 @@ func cmd_create(ctx *appcontext.AppContext, _ *repository.Repository, args []str
 		storageConfiguration.Encryption = nil
 	}
 
-	switch flags.NArg() {
-	case 0:
+	if cmd.Location == "" {
 		repo, err := storage.Create(filepath.Join(ctx.HomeDir, ".plakar"), *storageConfiguration)
 		if err != nil {
 			return 1, err
 		}
 		repo.Close()
-	case 1:
-		repo, err := storage.Create(flags.Arg(0), *storageConfiguration)
+	} else {
+		repo, err := storage.Create(cmd.Location, *storageConfiguration)
 		if err != nil {
 			return 1, err
 		}
 		repo.Close()
-	default:
-		return 1, fmt.Errorf("%s: too many parameters", flag.CommandLine.Name())
 	}
-
 	return 0, nil
 }

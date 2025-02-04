@@ -35,10 +35,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("rm", cmd_rm)
+	subcommands.Register("rm", parse_cmd_rm)
 }
 
-func cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (int, error) {
+func parse_cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_older string
 	var opt_tag string
 	flags := flag.NewFlagSet("rm", flag.ExitOnError)
@@ -110,10 +110,33 @@ func cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args []stri
 		log.Fatalf("%s: need at least one snapshot ID to rm", flag.CommandLine.Name())
 	}
 
+	return &Rm{
+		RepositoryLocation: repo.Location(),
+		RepositorySecret:   ctx.GetSecret(),
+		Tag:                opt_tag,
+		BeforeDate:         beforeDate,
+		Prefixes:           flags.Args(),
+	}, nil
+}
+
+type Rm struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Tag        string
+	BeforeDate time.Time
+	Prefixes   []string
+}
+
+func (cmd *Rm) Name() string {
+	return "rm"
+}
+
+func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	var snapshots []*snapshot.Snapshot
-	if opt_older != "" || opt_tag != "" {
-		if flags.NArg() != 0 {
-			tmp, err := utils.GetSnapshots(repo, flags.Args())
+	if !cmd.BeforeDate.IsZero() || cmd.Tag != "" {
+		if len(cmd.Prefixes) != 0 {
+			tmp, err := utils.GetSnapshots(repo, cmd.Prefixes)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -126,7 +149,7 @@ func cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args []stri
 			snapshots = tmp
 		}
 	} else {
-		tmp, err := utils.GetSnapshots(repo, flags.Args())
+		tmp, err := utils.GetSnapshots(repo, cmd.Prefixes)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -136,13 +159,13 @@ func cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args []stri
 	errors := 0
 	wg := sync.WaitGroup{}
 	for _, snap := range snapshots {
-		if opt_older != "" && snap.Header.Timestamp.After(beforeDate) {
+		if !cmd.BeforeDate.IsZero() && snap.Header.Timestamp.After(cmd.BeforeDate) {
 			continue
 		}
-		if opt_tag != "" {
+		if cmd.Tag != "" {
 			found := false
 			for _, t := range snap.Header.Tags {
-				if opt_tag == t {
+				if cmd.Tag == t {
 					found = true
 					break
 				}
@@ -165,7 +188,7 @@ func cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args []stri
 			wg.Done()
 			ctx.GetLogger().Info("removed snapshot %x of size %s in %s",
 				snap.Header.GetIndexShortID(),
-				humanize.Bytes(snap.Header.Summary.Directory.Size+snap.Header.Summary.Below.Size),
+				humanize.Bytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
 				time.Since(t0))
 		}(snap)
 	}

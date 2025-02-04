@@ -53,23 +53,23 @@ The sub-commands are as follows:
 
 Show repository information:
 
-	plakar info
+	$ plakar info
 
 Show detailed information for a snapshot:
 
-	plakar info snapshot abc123
+	$ plakar info snapshot abc123
 
 List all states in the repository:
 
-	plakar info state
+	$ plakar info state
 
 Display a specific object within a snapshot:
 
-	plakar info object 1234567890abcdef
+	$ plakar info object 1234567890abcdef
 
 Display filesystem details for a path within a snapshot:
 
-	plakar info vfs abc123:/etc/passwd
+	$ plakar info vfs abc123:/etc/passwd
 
 # DIAGNOSTICS
 
@@ -89,4 +89,4 @@ The **plakar info** utility exits&#160;0 on success, and&#160;&gt;0 if an error 
 plakar(1),
 plakar-snapshot(1)
 
-Nixpkgs - February 1, 2025
+Nixpkgs - February 3, 2025

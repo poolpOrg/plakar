@@ -62,7 +62,7 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 		a.Ctime = snap.Header.Timestamp
 		a.Mtime = snap.Header.Timestamp
 		a.Atime = snap.Header.Timestamp
-		a.Size = snap.Header.Summary.Directory.Size + snap.Header.Summary.Below.Size
+		a.Size = snap.Header.GetSource(0).Summary.Directory.Size + snap.Header.GetSource(0).Summary.Below.Size
 	} else {
 		d.snap = d.parent.snap
 		d.repo = d.parent.repo
@@ -150,8 +150,8 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 		dirEnt := fuse.Dirent{
 			Inode: entry.Stat().Ino(),
-			Name: child,
-			Type: fuse.DT_File,
+			Name:  child,
+			Type:  fuse.DT_File,
 		}
 		if entry.Stat().IsDir() {
 			dirEnt.Type = fuse.DT_Dir
