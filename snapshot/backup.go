@@ -148,7 +148,7 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 
 						entry := vfs.NewEntry(path.Dir(record.Pathname), &record)
 						if err := backupCtx.recordEntry(entry); err != nil {
-							backupCtx.recordError(record.Pathname, err)
+							_ = backupCtx.recordError(record.Pathname, err)
 							return
 						}
 					}
@@ -390,7 +390,7 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 			}
 
 			if err := backupCtx.recordEntry(fileEntry); err != nil {
-				backupCtx.recordError(record.Pathname, err)
+				_ = backupCtx.recordError(record.Pathname, err)
 				return
 			}
 
