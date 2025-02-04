@@ -36,7 +36,7 @@ func init() {
 
 func parse_cmd_clone(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("clone", flag.ExitOnError)
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	if flags.NArg() != 2 || flags.Arg(0) != "to" {
 		ctx.GetLogger().Error("usage: %s to repository", flags.Name())

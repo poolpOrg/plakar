@@ -29,7 +29,7 @@ func (rs *RepositoryStore[K, V]) Get(sum objects.Checksum) (*btree.Node[K, objec
 		return nil, err
 	}
 	node := &btree.Node[K, objects.Checksum, V]{}
-	err = msgpack.NewDecoder(rd).Decode(node)
+	_ = msgpack.NewDecoder(rd).Decode(node)
 	return node, nil
 }
 

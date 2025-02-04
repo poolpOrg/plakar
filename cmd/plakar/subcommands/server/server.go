@@ -36,7 +36,7 @@ func parse_cmd_server(ctx *appcontext.AppContext, repo *repository.Repository, a
 	flags := flag.NewFlagSet("server", flag.ExitOnError)
 	flags.StringVar(&opt_listen, "listen", "127.0.0.1:9876", "address to listen on")
 	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "disable delete operations")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	noDelete := true
 	if opt_allowdelete {
@@ -64,6 +64,6 @@ func (cmd *Server) Name() string {
 }
 
 func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	httpd.Server(repo, cmd.ListenAddr, cmd.NoDelete)
+	_ = httpd.Server(repo, cmd.ListenAddr, cmd.NoDelete)
 	return 0, nil
 }

@@ -127,7 +127,7 @@ func (repository *Repository) connectSSH(location *url.URL) error {
 			err = repository.decoder.Decode(&result)
 			if err != nil {
 				stdin.Close()
-				subProcess.Wait()
+				_ = subProcess.Wait()
 				return
 			}
 			repository.notifications <- result

@@ -48,7 +48,7 @@ func parse_cmd_ls(ctx *appcontext.AppContext, repo *repository.Repository, args 
 	flags.BoolVar(&opt_uuid, "uuid", false, "display uuid instead of short ID")
 	flags.StringVar(&opt_tag, "tag", "", "filter by tag")
 	flags.BoolVar(&opt_recursive, "recursive", false, "recursive listing")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	if flags.NArg() > 1 {
 		return nil, fmt.Errorf("too many arguments")

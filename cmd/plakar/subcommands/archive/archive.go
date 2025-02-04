@@ -43,7 +43,7 @@ func parse_cmd_archive(ctx *appcontext.AppContext, repo *repository.Repository, 
 	flags.StringVar(&opt_output, "output", "", "archive pathname")
 	flags.BoolVar(&opt_rebase, "rebase", false, "strip pathname when pulling")
 	flags.StringVar(&opt_format, "format", "tarball", "archive format")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	if flags.NArg() == 0 {
 		log.Fatalf("%s: need at least one snapshot ID to pull", flag.CommandLine.Name())

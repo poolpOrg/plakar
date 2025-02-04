@@ -276,7 +276,7 @@ func (repository *Repository) GetPackfile(checksum objects.Checksum) (io.Reader,
 
 func (repository *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint32, length uint32) (io.Reader, error) {
 	opts := minio.GetObjectOptions{}
-	opts.SetRange(int64(offset), int64(offset+length))
+	_ = opts.SetRange(int64(offset), int64(offset+length))
 	object, err := repository.minioClient.GetObject(context.Background(), repository.bucketName, fmt.Sprintf("packfiles/%02x/%016x", checksum[0], checksum), opts)
 	if err != nil {
 		return nil, err

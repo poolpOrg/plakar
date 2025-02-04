@@ -114,7 +114,7 @@ func (d *Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	if d.name == "/" {
 
-		d.repo.RebuildState()
+		_ = d.repo.RebuildState()
 
 		snapshotIDs, err := d.repo.GetSnapshots()
 		if err != nil {

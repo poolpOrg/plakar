@@ -45,7 +45,7 @@ func parse_cmd_restore(ctx *appcontext.AppContext, repo *repository.Repository, 
 	flags.StringVar(&pullPath, "to", ctx.CWD, "base directory where pull will restore")
 	flags.BoolVar(&pullRebase, "rebase", false, "strip pathname when pulling")
 	flags.BoolVar(&opt_quiet, "quiet", false, "do not print progress")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	return &Restore{
 		RepositoryLocation: repo.Location(),
@@ -102,7 +102,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 				if err != nil {
 					return 1, err
 				}
-				snap.Restore(exporterInstance, ctx.CWD, ctx.CWD, opts)
+				_ = snap.Restore(exporterInstance, ctx.CWD, ctx.CWD, opts)
 				snap.Close()
 				return 0, nil
 			}
@@ -117,7 +117,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 
 	for offset, snap := range snapshots {
 		_, pattern := utils.ParseSnapshotID(cmd.Snapshots[offset])
-		snap.Restore(exporterInstance, exporterInstance.Root(), pattern, opts)
+		_ = snap.Restore(exporterInstance, exporterInstance.Root(), pattern, opts)
 		snap.Close()
 	}
 	return 0, nil

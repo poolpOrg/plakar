@@ -60,10 +60,6 @@ func (c *ScanCache) has(prefix, key string) (bool, error) {
 	return c.db.Has([]byte(fmt.Sprintf("%s:%s", prefix, key)), nil)
 }
 
-func (c *ScanCache) delete(prefix, key string) error {
-	return c.db.Delete([]byte(fmt.Sprintf("%s:%s", prefix, key)), nil)
-}
-
 func (c *ScanCache) PutFile(file string, data []byte) error {
 	return c.put("__file__", file, data)
 }

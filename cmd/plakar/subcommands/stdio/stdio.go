@@ -34,7 +34,7 @@ func parse_cmd_stdio(ctx *appcontext.AppContext, repo *repository.Repository, ar
 
 	flags := flag.NewFlagSet("stdio", flag.ExitOnError)
 	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "disable delete operations")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	noDelete := true
 	if opt_allowdelete {

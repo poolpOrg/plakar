@@ -1,6 +1,8 @@
 package agent
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"github.com/prometheus/client_golang/prometheus"
+)
 
 var (
 	// Define a counter
@@ -33,14 +35,6 @@ func init() {
 	prometheus.MustRegister(requestsTotal)
 	prometheus.MustRegister(upGauge)
 	prometheus.MustRegister(disconnectsTotal)
-}
-
-func trackRequest(method, status string) {
-	requestsTotal.WithLabelValues(method, status).Inc()
-}
-
-func setUpGauge(value float64) {
-	upGauge.Set(value)
 }
 
 func handleDisconnect() {

@@ -46,7 +46,7 @@ func parse_cmd_ui(ctx *appcontext.AppContext, repo *repository.Repository, args 
 	flags.BoolVar(&opt_cors, "cors", false, "enable CORS")
 	flags.BoolVar(&opt_noauth, "no-auth", false, "don't use authentication")
 	flags.BoolVar(&opt_nospawn, "no-spawn", false, "don't spawn browser")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	return &Ui{
 		RepositoryLocation: repo.Location(),

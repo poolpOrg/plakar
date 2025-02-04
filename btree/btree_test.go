@@ -243,7 +243,7 @@ func TestPersist(t *testing.T) {
 	}
 
 	store2 := InMemoryStore[rune, int]{}
-	root, err := Persist(tree1, &store2, func (e int) (int, error) { return e, nil })
+	root, err := Persist(tree1, &store2, func(e int) (int, error) { return e, nil })
 	if err != nil {
 		t.Fatalf("Failed to persist the tree: %v", err)
 	}
@@ -309,11 +309,9 @@ func TestVisitDFS(t *testing.T) {
 	}
 
 	keySaw := []rune{}
-	tree.VisitDFS(func(ptr int, node *Node[rune, int, int]) error {
+	_ = tree.VisitDFS(func(ptr int, node *Node[rune, int, int]) error {
 		if node.isleaf() {
-			for i := range node.Keys {
-				keySaw = append(keySaw, node.Keys[i])
-			}
+			keySaw = append(keySaw, node.Keys...)
 		}
 		return nil
 	})

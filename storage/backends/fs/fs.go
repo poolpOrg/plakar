@@ -33,10 +33,10 @@ import (
 )
 
 type Repository struct {
-	config     storage.Configuration
-	location   string
-	packfiles  Buckets
-	states     Buckets
+	config    storage.Configuration
+	location  string
+	packfiles Buckets
+	states    Buckets
 }
 
 func init() {
@@ -52,7 +52,6 @@ func NewRepository(location string) storage.Store {
 func (repo *Repository) Location() string {
 	return repo.location
 }
-
 
 func (repo *Repository) Path(args ...string) string {
 	root := repo.Location()
@@ -76,12 +75,12 @@ func (repo *Repository) Create(location string, config storage.Configuration) er
 
 	repo.packfiles = NewBuckets(repo.Path("packfiles"))
 	if err := repo.packfiles.Create(); err != nil {
-		return err;
+		return err
 	}
 
 	repo.states = NewBuckets(repo.Path("states"))
 	if err := repo.states.Create(); err != nil {
-		return err;
+		return err
 	}
 
 	jconfig, err := msgpack.Marshal(config)
@@ -95,7 +94,6 @@ func (repo *Repository) Create(location string, config storage.Configuration) er
 
 	return WriteToFileAtomic(repo.Path("CONFIG"), compressedConfig)
 }
-
 
 func (repo *Repository) Open(location string) error {
 

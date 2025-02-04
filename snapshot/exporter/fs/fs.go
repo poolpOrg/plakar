@@ -70,12 +70,8 @@ func (p *FSExporter) StoreFile(pathname string, fp io.Reader) error {
 		f.Close()
 		return err
 	}
-	if err := f.Sync(); err != nil {
-		//logging.Warn("sync failure: %s: %s", pathname, err)
-	}
-	if err := f.Close(); err != nil {
-		//logging.Warn("close failure: %s: %s", pathname, err)
-	}
+	_ = f.Sync()
+	_ = f.Close()
 	return nil
 }
 

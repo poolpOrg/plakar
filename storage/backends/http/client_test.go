@@ -33,13 +33,13 @@ func (h MyHandler) Configuration(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	w.Write([]byte(fmt.Sprintf(`{"Configuration": %s}`, config)))
+	_, _ = w.Write([]byte(fmt.Sprintf(`{"Configuration": %s}`, config)))
 	return nil
 }
 
 func (h MyHandler) Close(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{}`))
+	_, _ = w.Write([]byte(`{}`))
 	return nil
 }
 
@@ -52,7 +52,7 @@ func (h *MyHandler) PutState(w http.ResponseWriter, r *http.Request) error {
 	h.states = append(h.states, storedeData{reqPutState.Checksum, reqPutState.Data})
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{}`))
+	_, _ = w.Write([]byte(`{}`))
 	return nil
 }
 
@@ -107,7 +107,7 @@ func (h *MyHandler) DeleteState(w http.ResponseWriter, r *http.Request) error {
 	h.states = append(h.states[:idxToDelete], h.states[idxToDelete+1:]...)
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{}`))
+	_, _ = w.Write([]byte(`{}`))
 	return nil
 }
 
@@ -120,7 +120,7 @@ func (h *MyHandler) PutPackfile(w http.ResponseWriter, r *http.Request) error {
 	h.packfiles = append(h.packfiles, storedeData{reqPutPackfile.Checksum, reqPutPackfile.Data})
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{}`))
+	_, _ = w.Write([]byte(`{}`))
 	return nil
 }
 
@@ -175,7 +175,7 @@ func (h *MyHandler) DeletePackfile(w http.ResponseWriter, r *http.Request) error
 	h.packfiles = append(h.packfiles[:idxToDelete], h.packfiles[idxToDelete+1:]...)
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{}`))
+	_, _ = w.Write([]byte(`{}`))
 	return nil
 }
 
@@ -287,7 +287,7 @@ func TestHttpBackend(t *testing.T) {
 	}
 	require.Equal(t, expected, packfiles)
 
-	rd, err = repo.GetPackfileBlob(checksum4, 0, 4)
+	rd, _ = repo.GetPackfileBlob(checksum4, 0, 4)
 	buf = new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)
@@ -301,7 +301,7 @@ func TestHttpBackend(t *testing.T) {
 	expected = []objects.Checksum{{0x60, 0x70, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}}
 	require.Equal(t, expected, packfiles)
 
-	rd, err = repo.GetPackfile(checksum4)
+	rd, _ = repo.GetPackfile(checksum4)
 	buf = new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)

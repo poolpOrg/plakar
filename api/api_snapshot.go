@@ -452,7 +452,7 @@ func snapshotVFSDownloader(w http.ResponseWriter, r *http.Request) error {
 			Id string `json:"id"`
 		}{id}
 
-		json.NewEncoder(w).Encode(&res)
+		_ = json.NewEncoder(w).Encode(&res)
 		return nil
 	}
 }

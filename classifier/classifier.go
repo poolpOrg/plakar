@@ -82,8 +82,7 @@ func Register(name string, backend func() Backend) {
 
 func (cf *Classifier) Close() error {
 	for _, backend := range cf.backend {
-		if err := backend.Close(); err != nil {
-		}
+		_ = backend.Close()
 	}
 	return nil
 }

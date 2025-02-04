@@ -66,7 +66,7 @@ func (cmd *InfoState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 				return 1, io.ErrShortWrite
 			}
 
-			scanCache, err := repo.AppContext().GetCache().Scan(identifier)
+			scanCache, _ := repo.AppContext().GetCache().Scan(identifier)
 			defer scanCache.Close()
 
 			st, err := state.FromStream(rawStateRd, scanCache)

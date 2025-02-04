@@ -42,7 +42,7 @@ func init() {
 
 func parse_cmd_sync(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("sync", flag.ExitOnError)
-	flags.Parse(args)
+	_ = flags.Parse(args)
 	return &Sync{
 		RepositoryLocation: repo.Location(),
 		RepositorySecret:   ctx.GetSecret(),
@@ -231,7 +231,7 @@ func synchronize(srcRepository *repository.Repository, dstRepository *repository
 			if err != nil {
 				return err
 			}
-			dstSnapshot.PutBlob(resources.RT_CHUNK, chunkID, chunkData)
+			_ = dstSnapshot.PutBlob(resources.RT_CHUNK, chunkID, chunkData)
 		}
 	}
 
@@ -248,7 +248,7 @@ func synchronize(srcRepository *repository.Repository, dstRepository *repository
 			if err != nil {
 				return err
 			}
-			dstSnapshot.PutBlob(resources.RT_OBJECT, objectID, objectData)
+			_ = dstSnapshot.PutBlob(resources.RT_OBJECT, objectID, objectData)
 		}
 	}
 
@@ -270,17 +270,17 @@ func synchronize(srcRepository *repository.Repository, dstRepository *repository
 			if err != nil {
 				return err
 			}
-			dstSnapshot.PutBlob(resources.RT_VFS_ENTRY, entryID, entryData)
+			_ = dstSnapshot.PutBlob(resources.RT_VFS_ENTRY, entryID, entryData)
 		}
 	}
 
-	fs.VisitNodes(func(csum objects.Checksum, node *btree.Node[string, objects.Checksum, objects.Checksum]) error {
+	_ = fs.VisitNodes(func(csum objects.Checksum, node *btree.Node[string, objects.Checksum, objects.Checksum]) error {
 		if !dstRepository.BlobExists(resources.RT_VFS, csum) {
 			bytes, err := msgpack.Marshal(node)
 			if err != nil {
 				return err
 			}
-			dstSnapshot.PutBlob(resources.RT_VFS, csum, bytes)
+			_ = dstSnapshot.PutBlob(resources.RT_VFS, csum, bytes)
 		}
 		return nil
 	})

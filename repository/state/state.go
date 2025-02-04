@@ -37,8 +37,8 @@ type EntryType uint8
 
 const (
 	ET_METADATA  EntryType = 1
-	ET_LOCATIONS           = 2
-	ET_TIMESTAMP           = 3
+	ET_LOCATIONS EntryType = 2
+	ET_TIMESTAMP EntryType = 3
 )
 
 type Metadata struct {
@@ -202,12 +202,12 @@ func (ls *LocalState) SerializeToStream(w io.Writer) error {
 
 	/* First we serialize all the LOCATIONS type entries */
 	for _, entry := range ls.cache.GetDeltas() {
-		w.Write([]byte{byte(ET_LOCATIONS)})
-		w.Write(entry)
+		_, _ = w.Write([]byte{byte(ET_LOCATIONS)})
+		_, _ = w.Write(entry)
 	}
 
 	/* Finally we serialize the Metadata */
-	w.Write([]byte{byte(ET_METADATA)})
+	_, _ = w.Write([]byte{byte(ET_METADATA)})
 	if err := writeUint32(ls.Metadata.Version); err != nil {
 		return fmt.Errorf("failed to write version: %w", err)
 	}
@@ -323,7 +323,7 @@ func (ls *LocalState) deserializeFromStream(r io.Reader) error {
 			return fmt.Errorf("failed to deserialize delta entry %w", err)
 		}
 
-		ls.cache.PutDelta(delta.Type, delta.Blob, de_buf)
+		_ = ls.cache.PutDelta(delta.Type, delta.Blob, de_buf)
 	}
 
 	/* Deserialize Metadata */
@@ -378,7 +378,7 @@ func (ls *LocalState) SetPackfileForBlob(Type resources.Type, packfileChecksum o
 		},
 	}
 
-	ls.PutDelta(de)
+	_ = ls.PutDelta(de)
 }
 
 func (ls *LocalState) BlobExists(Type resources.Type, blobChecksum objects.Checksum) bool {

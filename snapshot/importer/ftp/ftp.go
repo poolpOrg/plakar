@@ -202,7 +202,7 @@ func (p *FTPImporter) NewReader(pathname string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	tmpfile.Seek(0, 0)
+	_, _ = tmpfile.Seek(0, 0)
 
 	return tmpfile, nil
 }

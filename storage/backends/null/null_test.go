@@ -75,13 +75,13 @@ func TestNullBackend(t *testing.T) {
 	err = repo.PutPackfile(checksum, bytes.NewReader([]byte("test")))
 	require.NoError(t, err)
 
-	rd, err = repo.GetPackfile(checksum)
+	rd, _ = repo.GetPackfile(checksum)
 	buf = new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)
 	require.Equal(t, "", buf.String())
 
-	rd, err = repo.GetPackfileBlob(checksum, 0, 0)
+	rd, _ = repo.GetPackfileBlob(checksum, 0, 0)
 	buf = new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)

@@ -30,7 +30,7 @@ func init() {
 
 func parse_cmd_cleanup(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("cleanup", flag.ExitOnError)
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	return &Cleanup{
 		RepositoryLocation: repo.Location(),

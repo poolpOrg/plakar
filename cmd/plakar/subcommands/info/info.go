@@ -38,7 +38,7 @@ func parse_cmd_info(ctx *appcontext.AppContext, repo *repository.Repository, arg
 	}
 
 	flags := flag.NewFlagSet("info", flag.ExitOnError)
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	// Determine which concept to show information for based on flags.Args()[0]
 	switch flags.Arg(0) {

@@ -67,7 +67,7 @@ func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, ar
 
 	flags := flag.NewFlagSet("agent", flag.ExitOnError)
 	flags.StringVar(&opt_prometheus, "prometheus", "", "prometheus exporter interface")
-	flags.Parse(args)
+	_ = flags.Parse(args)
 
 	return &Agent{
 		prometheus: opt_prometheus,
@@ -143,8 +143,6 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 		return fmt.Errorf("failed to set socket permissions: %w", err)
 	}
 
-	cancelCtx, _ := context.WithCancel(context.Background())
-
 	if cmd.prometheus != "" {
 		promlistener, err := net.Listen("tcp", cmd.prometheus)
 		if err != nil {
@@ -154,30 +152,19 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 
 		go func() {
 			http.Handle("/metrics", promhttp.Handler())
-			http.Serve(promlistener, nil)
+			_ = http.Serve(promlistener, nil)
 		}()
 	}
 
 	var wg sync.WaitGroup
 
 	for {
-		select {
-		case <-cancelCtx.Done():
-			return nil
-		default:
-		}
-
 		conn, err := cmd.listener.Accept()
 		if err != nil {
-			select {
-			case <-cancelCtx.Done():
+			if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "use of closed network connection" {
 				return nil
-			default:
-				if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "use of closed network connection" {
-					return nil
-				}
-				return fmt.Errorf("failed to accept connection: %w", err)
 			}
+			return fmt.Errorf("failed to accept connection: %w", err)
 		}
 
 		wg.Add(1)
