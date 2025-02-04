@@ -146,7 +146,7 @@ func (r *Repository) RebuildState() error {
 
 	// The first Serial id is our repository ID, this allows us to deal
 	// naturally with concurrent first backups.
-	r.state.UpdateSerialOr(r.configuration.RepositoryID)
+	_ = r.state.UpdateSerialOr(r.configuration.RepositoryID)
 
 	return nil
 }
