@@ -123,7 +123,7 @@ func (cmd *Exec) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		_, _ = io.Copy(os.Stderr, stderr)
 	}()
 	if p.Start() == nil {
-		p.Wait()
+		_ = p.Wait()
 		return p.ProcessState.ExitCode(), nil
 	}
 	return 1, err
