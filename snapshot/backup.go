@@ -168,7 +168,7 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 	return filesChannel, nil
 }
 
-func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *BackupOptions) error {
+func (snap *Snapshot) Backup(scanDir string, _ importer.Importer, options *BackupOptions) error {
 	snap.Event(events.StartEvent())
 	defer snap.Event(events.DoneEvent())
 
