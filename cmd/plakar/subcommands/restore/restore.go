@@ -117,7 +117,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 
 	for offset, snap := range snapshots {
 		_, pattern := utils.ParseSnapshotID(cmd.Snapshots[offset])
-		snap.Restore(exporterInstance, exporterInstance.Root(), pattern, opts)
+		_ = snap.Restore(exporterInstance, exporterInstance.Root(), pattern, opts)
 		snap.Close()
 	}
 	return 0, nil
