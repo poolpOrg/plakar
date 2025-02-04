@@ -155,7 +155,7 @@ func main() {
 			log.Printf("failed to open %s: %v", dot, err)
 		}
 		fmt.Fprintln(fp, "digraph g {")
-		idx.Dot(fp, false)
+		_ = idx.Dot(fp, false)
 		fmt.Fprintln(fp, "}")
 	}
 
