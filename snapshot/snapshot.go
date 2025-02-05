@@ -145,12 +145,12 @@ func Fork(repo *repository.Repository, Identifier objects.Checksum) (*Snapshot, 
 
 	snap.Header.Identifier = identifier
 
-	snap.Logger().Trace("snapshot", "%x: Fork(): %s", snap.Header.Identifier, snap.Header.GetIndexShortID())
+	snap.Logger().Trace("snapshot", "%x: Fork(): %x", snap.Header.Identifier, snap.Header.GetIndexShortID())
 	return snap, nil
 }
 
 func (snap *Snapshot) Close() error {
-	snap.Logger().Trace("snapshot", "%x: Close(): %s", snap.Header.Identifier, snap.Header.GetIndexShortID())
+	snap.Logger().Trace("snapshot", "%x: Close(): %x", snap.Header.Identifier, snap.Header.GetIndexShortID())
 
 	if snap.scanCache != nil {
 		return snap.scanCache.Close()

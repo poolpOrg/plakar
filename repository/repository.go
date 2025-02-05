@@ -391,9 +391,12 @@ func (r *Repository) DeletePackfile(checksum objects.Checksum) error {
 func (r *Repository) GetBlob(Type resources.Type, checksum objects.Checksum) (io.ReadSeeker, error) {
 	t0 := time.Now()
 	defer func() {
-		r.Logger().Trace("repository", "GetBlob(%x): %s", checksum, time.Since(t0))
+		r.Logger().Trace("repository", "GetBlob(%s, %x): %s", Type, checksum, time.Since(t0))
 	}()
 
+	if Type != resources.RT_SNAPSHOT {
+		checksum = r.ChecksumHMAC(checksum[:])
+	}
 	packfileChecksum, offset, length, exists := r.state.GetSubpartForBlob(Type, checksum)
 	if !exists {
 		return nil, ErrPackfileNotFound
@@ -413,6 +416,9 @@ func (r *Repository) BlobExists(Type resources.Type, checksum objects.Checksum) 
 		r.Logger().Trace("repository", "BlobExists(%x): %s", checksum, time.Since(t0))
 	}()
 
+	if Type != resources.RT_SNAPSHOT {
+		checksum = r.ChecksumHMAC(checksum[:])
+	}
 	return r.state.BlobExists(Type, checksum)
 }
 
