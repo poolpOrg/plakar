@@ -30,31 +30,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("check", parse_cmd_check)
-}
-
-func parse_cmd_check(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_concurrency uint64
-	var opt_fastCheck bool
-	var opt_noVerify bool
-	var opt_quiet bool
-
-	flags := flag.NewFlagSet("check", flag.ExitOnError)
-	flags.Uint64Var(&opt_concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
-	flags.BoolVar(&opt_noVerify, "no-verify", false, "disable signature verification")
-	flags.BoolVar(&opt_fastCheck, "fast", false, "enable fast checking (no checksum verification)")
-	flags.BoolVar(&opt_quiet, "quiet", false, "suppress output")
-	flags.Parse(args)
-
-	return &Check{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Concurrency:        opt_concurrency,
-		FastCheck:          opt_fastCheck,
-		NoVerify:           opt_noVerify,
-		Quiet:              opt_quiet,
-		Snapshots:          flags.Args(),
-	}, nil
+	subcommands.Register(&Check{}, "check")
 }
 
 type Check struct {
@@ -66,6 +42,19 @@ type Check struct {
 	NoVerify    bool
 	Quiet       bool
 	Snapshots   []string
+}
+
+func (cmd *Check) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("check", flag.ExitOnError)
+	flags.Uint64Var(&cmd.Concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
+	flags.BoolVar(&cmd.NoVerify, "no-verify", false, "disable signature verification")
+	flags.BoolVar(&cmd.FastCheck, "fast", false, "enable fast checking (no checksum verification)")
+	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
+	flags.Parse(args)
+
+	cmd.Snapshots = flags.Args()
+
+	return nil
 }
 
 func (cmd *Check) Name() string {

@@ -26,27 +26,18 @@ import (
 )
 
 func init() {
-	subcommands.Register("stdio", parse_cmd_stdio)
-}
-
-func parse_cmd_stdio(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_allowdelete bool
-
-	flags := flag.NewFlagSet("stdio", flag.ExitOnError)
-	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "disable delete operations")
-	flags.Parse(args)
-
-	noDelete := true
-	if opt_allowdelete {
-		noDelete = false
-	}
-	return &Stdio{
-		NoDelete: noDelete,
-	}, nil
+	subcommands.Register(&Stdio{}, "stdio")
 }
 
 type Stdio struct {
 	NoDelete bool
+}
+
+func (cmd *Stdio) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("stdio", flag.ExitOnError)
+	flags.BoolVar(&cmd.NoDelete, "allow-delete", false, "disable delete operations")
+	flags.Parse(args)
+	return nil
 }
 
 func (cmd *Stdio) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {

@@ -31,31 +31,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("restore", parse_cmd_restore)
-}
-
-func parse_cmd_restore(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var pullPath string
-	var pullRebase bool
-	var opt_concurrency uint64
-	var opt_quiet bool
-
-	flags := flag.NewFlagSet("restore", flag.ExitOnError)
-	flags.Uint64Var(&opt_concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
-	flags.StringVar(&pullPath, "to", ctx.CWD, "base directory where pull will restore")
-	flags.BoolVar(&pullRebase, "rebase", false, "strip pathname when pulling")
-	flags.BoolVar(&opt_quiet, "quiet", false, "do not print progress")
-	flags.Parse(args)
-
-	return &Restore{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Path:               pullPath,
-		Rebase:             pullRebase,
-		Concurrency:        opt_concurrency,
-		Quiet:              opt_quiet,
-		Snapshots:          flags.Args(),
-	}, nil
+	subcommands.Register(&Restore{}, "restore")
 }
 
 type Restore struct {
@@ -67,6 +43,21 @@ type Restore struct {
 	Concurrency uint64
 	Quiet       bool
 	Snapshots   []string
+}
+
+func (cmd *Restore) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("restore", flag.ExitOnError)
+	flags.Uint64Var(&cmd.Concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
+	flags.StringVar(&cmd.Path, "to", ctx.CWD, "base directory where pull will restore")
+	flags.BoolVar(&cmd.Rebase, "rebase", false, "strip pathname when pulling")
+	flags.BoolVar(&cmd.Quiet, "quiet", false, "do not print progress")
+	flags.Parse(args)
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Snapshots = flags.Args()
+
+	return nil
 }
 
 func (cmd *Restore) Name() string {

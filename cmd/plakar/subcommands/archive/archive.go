@@ -31,18 +31,24 @@ import (
 )
 
 func init() {
-	subcommands.Register("archive", parse_cmd_archive)
+	subcommands.Register(&Archive{}, "archive")
 }
 
-func parse_cmd_archive(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_rebase bool
-	var opt_output string
-	var opt_format string
+type Archive struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
 
+	Rebase         bool
+	Output         string
+	Format         string
+	SnapshotPrefix string
+}
+
+func (cmd *Archive) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("archive", flag.ExitOnError)
-	flags.StringVar(&opt_output, "output", "", "archive pathname")
-	flags.BoolVar(&opt_rebase, "rebase", false, "strip pathname when pulling")
-	flags.StringVar(&opt_format, "format", "tarball", "archive format")
+	flags.StringVar(&cmd.Output, "output", "", "archive pathname")
+	flags.BoolVar(&cmd.Rebase, "rebase", false, "strip pathname when pulling")
+	flags.StringVar(&cmd.Format, "format", "tarball", "archive format")
 	flags.Parse(args)
 
 	if flags.NArg() == 0 {
@@ -54,32 +60,19 @@ func parse_cmd_archive(ctx *appcontext.AppContext, repo *repository.Repository, 
 		"tarball": ".tar.gz",
 		"zip":     ".zip",
 	}
-	if _, ok := supportedFormats[opt_format]; !ok {
-		log.Fatalf("%s: unsupported format %s", flag.CommandLine.Name(), opt_format)
+	if _, ok := supportedFormats[cmd.Format]; !ok {
+		return fmt.Errorf("archive: unsupported format %s", cmd.Format)
 	}
 
-	if opt_output == "" {
-		opt_output = fmt.Sprintf("plakar-%s.%s", time.Now().UTC().Format(time.RFC3339), supportedFormats[opt_format])
+	if cmd.Output == "" {
+		cmd.Output = fmt.Sprintf("plakar-%s.%s", time.Now().UTC().Format(time.RFC3339),
+			supportedFormats[cmd.Format])
 	}
 
-	return &Archive{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Rebase:             opt_rebase,
-		Output:             opt_output,
-		Format:             opt_format,
-		SnapshotPrefix:     flags.Arg(0),
-	}, nil
-}
-
-type Archive struct {
-	RepositoryLocation string
-	RepositorySecret   []byte
-
-	Rebase         bool
-	Output         string
-	Format         string
-	SnapshotPrefix string
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.SnapshotPrefix = flags.Arg(0)
+	return nil
 }
 
 func (cmd *Archive) Name() string {

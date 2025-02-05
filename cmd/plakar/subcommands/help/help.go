@@ -33,30 +33,24 @@ import (
 var docs embed.FS
 
 func init() {
-	subcommands.Register("help", parse_cmd_help)
-}
-
-func parse_cmd_help(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_style string
-	flags := flag.NewFlagSet("help", flag.ExitOnError)
-	flags.StringVar(&opt_style, "style", "dracula", "style to use")
-	flags.Parse(args)
-
-	command := ""
-	if flags.NArg() > 0 {
-		command = flags.Arg(0)
-	}
-
-	return &Help{
-		Style:   opt_style,
-		Command: command,
-	}, nil
-
+	subcommands.Register(&Help{}, "help")
 }
 
 type Help struct {
 	Style   string
 	Command string
+}
+
+func (cmd *Help) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("help", flag.ExitOnError)
+	flags.StringVar(&cmd.Style, "style", "dracula", "style to use")
+	flags.Parse(args)
+
+	if flags.NArg() > 0 {
+		cmd.Command = flags.Arg(0)
+	}
+
+	return nil
 }
 
 func (cmd *Help) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {

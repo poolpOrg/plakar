@@ -29,16 +29,16 @@ import (
 const VERSION = "v0.4.22-alpha"
 
 func init() {
-	subcommands.Register("version", parse_cmd_version)
-}
-
-func parse_cmd_version(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	flags := flag.NewFlagSet("version", flag.ExitOnError)
-	flags.Parse(args)
-	return &Version{}, nil
+	subcommands.Register(&Version{}, "version")
 }
 
 type Version struct {
+}
+
+func (cmd *Version) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("version", flag.ExitOnError)
+	flags.Parse(args)
+	return nil
 }
 
 func (cmd *Version) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {

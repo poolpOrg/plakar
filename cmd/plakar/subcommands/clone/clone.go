@@ -31,23 +31,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("clone", parse_cmd_clone)
-}
-
-func parse_cmd_clone(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	flags := flag.NewFlagSet("clone", flag.ExitOnError)
-	flags.Parse(args)
-
-	if flags.NArg() != 2 || flags.Arg(0) != "to" {
-		ctx.GetLogger().Error("usage: %s to repository", flags.Name())
-		return nil, fmt.Errorf("usage: %s to repository", flags.Name())
-	}
-
-	return &Clone{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Dest:               flags.Arg(1),
-	}, nil
+	subcommands.Register(&Clone{}, "clone")
 }
 
 type Clone struct {
@@ -55,6 +39,20 @@ type Clone struct {
 	RepositorySecret   []byte
 
 	Dest string
+}
+
+func (cmd *Clone) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("clone", flag.ExitOnError)
+	flags.Parse(args)
+
+	if flags.NArg() != 2 || flags.Arg(0) != "to" {
+		return fmt.Errorf("usage: %s to repository", flags.Name())
+	}
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Dest = flags.Arg(1)
+	return nil
 }
 
 func (cmd *Clone) Name() string {

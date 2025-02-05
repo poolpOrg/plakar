@@ -31,28 +31,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("checksum", parse_cmd_checksum)
-}
-
-func parse_cmd_checksum(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var enableFastChecksum bool
-
-	flags := flag.NewFlagSet("checksum", flag.ExitOnError)
-	flags.BoolVar(&enableFastChecksum, "fast", false, "enable fast checksum (return recorded checksum)")
-
-	flags.Parse(args)
-
-	if flags.NArg() == 0 {
-		ctx.GetLogger().Error("%s: at least one parameter is required", flags.Name())
-		return nil, fmt.Errorf("at least one parameter is required")
-	}
-
-	return &Checksum{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Fast:               enableFastChecksum,
-		Targets:            flags.Args(),
-	}, nil
+	subcommands.Register(&Checksum{}, "checksum")
 }
 
 type Checksum struct {
@@ -61,6 +40,19 @@ type Checksum struct {
 
 	Fast    bool
 	Targets []string
+}
+
+func (cmd *Checksum) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("checksum", flag.ExitOnError)
+	flags.BoolVar(&cmd.Fast, "fast", false, "enable fast checksum (return recorded checksum)")
+	flags.Parse(args)
+
+	if flags.NArg() == 0 {
+		return fmt.Errorf("at least one parameter is required")
+	}
+
+	cmd.Targets = flags.Args()
+	return nil
 }
 
 func (cmd *Checksum) Name() string {

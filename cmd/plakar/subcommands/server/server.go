@@ -26,29 +26,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("server", parse_cmd_server)
-}
-
-func parse_cmd_server(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_listen string
-	var opt_allowdelete bool
-
-	flags := flag.NewFlagSet("server", flag.ExitOnError)
-	flags.StringVar(&opt_listen, "listen", "127.0.0.1:9876", "address to listen on")
-	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "disable delete operations")
-	flags.Parse(args)
-
-	noDelete := true
-	if opt_allowdelete {
-		noDelete = false
-	}
-	return &Server{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-
-		ListenAddr: opt_listen,
-		NoDelete:   noDelete,
-	}, nil
+	subcommands.Register(&Server{}, "server")
 }
 
 type Server struct {
@@ -57,6 +35,25 @@ type Server struct {
 
 	ListenAddr string
 	NoDelete   bool
+}
+
+func (cmd *Server) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var opt_allowdelete bool
+
+	flags := flag.NewFlagSet("server", flag.ExitOnError)
+	flags.StringVar(&cmd.ListenAddr, "listen", "127.0.0.1:9876", "address to listen on")
+	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "disable delete operations")
+	flags.Parse(args)
+
+	cmd.NoDelete = true
+	if opt_allowdelete {
+		cmd.NoDelete = false
+	}
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+
+	return nil
 }
 
 func (cmd *Server) Name() string {

@@ -1,6 +1,7 @@
 package info
 
 import (
+	"flag"
 	"fmt"
 	"path"
 	"time"
@@ -20,6 +21,20 @@ type InfoVFS struct {
 
 func (cmd *InfoVFS) Name() string {
 	return "info_vfs"
+}
+
+func (cmd *InfoVFS) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("info errors", flag.ExitOnError)
+	flags.Parse(args)
+
+	if flags.NArg() != 1 {
+		return fmt.Errorf("usage: %s snapshotID:path", flags.Name())
+	}
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.SnapshotPath = flags.Arg(0)
+	return nil
 }
 
 func (cmd *InfoVFS) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {

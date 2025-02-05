@@ -59,20 +59,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("agent", parse_cmd_agent)
-}
-
-func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_prometheus string
-
-	flags := flag.NewFlagSet("agent", flag.ExitOnError)
-	flags.StringVar(&opt_prometheus, "prometheus", "", "prometheus exporter interface")
-	flags.Parse(args)
-
-	return &Agent{
-		prometheus: opt_prometheus,
-		socketPath: filepath.Join(ctx.CacheDir, "agent.sock"),
-	}, nil
+	subcommands.Register(&Agent{}, "agent")
 }
 
 type Agent struct {
@@ -80,6 +67,15 @@ type Agent struct {
 	socketPath string
 
 	listener net.Listener
+}
+
+func (cmd *Agent) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("agent", flag.ExitOnError)
+	flags.StringVar(&cmd.prometheus, "prometheus", "", "prometheus exporter interface")
+	flags.Parse(args)
+
+	cmd.socketPath = filepath.Join(ctx.CacheDir, "agent.sock")
+	return nil
 }
 
 func (cmd *Agent) checkSocket() bool {

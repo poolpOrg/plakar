@@ -31,23 +31,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("exec", parse_cmd_exec)
-}
-
-func parse_cmd_exec(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	flags := flag.NewFlagSet("exec", flag.ExitOnError)
-	flags.Parse(args)
-
-	if flags.NArg() == 0 {
-		ctx.GetLogger().Error("%s: at least one parameters is required", flags.Name())
-		return nil, fmt.Errorf("at least one parameters is required")
-	}
-	return &Exec{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		SnapshotPrefix:     flags.Arg(0),
-		Args:               flags.Args()[1:],
-	}, nil
+	subcommands.Register(&Exec{}, "exec")
 }
 
 type Exec struct {
@@ -56,6 +40,22 @@ type Exec struct {
 
 	SnapshotPrefix string
 	Args           []string
+}
+
+func (cmd *Exec) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("exec", flag.ExitOnError)
+	flags.Parse(args)
+
+	if flags.NArg() == 0 {
+		return fmt.Errorf("at least one parameters is required")
+	}
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.SnapshotPrefix = flags.Arg(0)
+	cmd.Args = flags.Args()[1:]
+
+	return nil
 }
 
 func (cmd *Exec) Name() string {

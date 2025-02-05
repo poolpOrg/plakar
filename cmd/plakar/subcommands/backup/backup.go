@@ -36,7 +36,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("backup", parse_cmd_backup)
+	subcommands.Register(&Backup{}, "backup")
 }
 
 type excludeFlags []string
@@ -50,21 +50,29 @@ func (e *excludeFlags) Set(value string) error {
 	return nil
 }
 
-func parse_cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_tags string
+type Backup struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Concurrency uint64
+	Tags        string
+	Excludes    []glob.Glob
+	Quiet       bool
+	Path        string
+}
+
+func (cmd *Backup) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	var opt_excludes string
 	var opt_exclude excludeFlags
-	var opt_concurrency uint64
-	var opt_quiet bool
 	// var opt_stdio bool
 
 	excludes := []glob.Glob{}
 	flags := flag.NewFlagSet("backup", flag.ExitOnError)
-	flags.Uint64Var(&opt_concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
-	flags.StringVar(&opt_tags, "tag", "", "tag to assign to this snapshot")
+	flags.Uint64Var(&cmd.Concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
+	flags.StringVar(&cmd.Tags, "tag", "", "tag to assign to this snapshot")
 	flags.StringVar(&opt_excludes, "excludes", "", "file containing a list of exclusions")
 	flags.Var(&opt_exclude, "exclude", "file containing a list of exclusions")
-	flags.BoolVar(&opt_quiet, "quiet", false, "suppress output")
+	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
 	//flags.BoolVar(&opt_stdio, "stdio", false, "output one line per file to stdout instead of the default interactive output")
 	flags.Parse(args)
 
@@ -75,8 +83,7 @@ func parse_cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, a
 	if opt_excludes != "" {
 		fp, err := os.Open(opt_excludes)
 		if err != nil {
-			ctx.GetLogger().Error("%s", err)
-			return nil, err
+			return err
 		}
 		defer fp.Close()
 
@@ -84,38 +91,20 @@ func parse_cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, a
 		for scanner.Scan() {
 			pattern, err := glob.Compile(scanner.Text())
 			if err != nil {
-				ctx.GetLogger().Error("%s", err)
-				return nil, err
+				return err
 			}
 			excludes = append(excludes, pattern)
 		}
 		if err := scanner.Err(); err != nil {
-			ctx.GetLogger().Error("%s", err)
-			return nil, err
+			return err
 		}
 	}
-	return &Backup{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Concurrency:        opt_concurrency,
-		Tags:               opt_tags,
-		Excludes:           excludes,
-		Exclude:            opt_exclude,
-		Quiet:              opt_quiet,
-		Path:               flags.Arg(0),
-	}, nil
-}
 
-type Backup struct {
-	RepositoryLocation string
-	RepositorySecret   []byte
-
-	Concurrency uint64
-	Tags        string
-	Excludes    []glob.Glob
-	Exclude     []string
-	Quiet       bool
-	Path        string
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Excludes = excludes
+	cmd.Path = flags.Arg(0)
+	return nil
 }
 
 func (cmd *Backup) Name() string {

@@ -215,9 +215,9 @@ func entryPoint() int {
 
 	ctx.SetLogger(logger)
 
-	command, args := flag.Args()[0], flag.Args()[1:]
-
 	var repositoryPath string
+	var args []string
+
 	if flag.Arg(0) == "on" {
 		if len(flag.Args()) < 2 {
 			log.Fatalf("%s: missing plakar repository", flag.CommandLine.Name())
@@ -226,21 +226,25 @@ func entryPoint() int {
 			log.Fatalf("%s: missing command", flag.CommandLine.Name())
 		}
 		repositoryPath = flag.Arg(1)
-		command, args = flag.Arg(2), flag.Args()[3:]
+		args = flag.Args()[2:]
 	} else {
 		repositoryPath = os.Getenv("PLAKAR_REPOSITORY")
 		if repositoryPath == "" {
 			repositoryPath = filepath.Join(ctx.HomeDir, ".plakar")
 		}
+		args = flag.Args()
 	}
+
+	command := args[0]
 
 	// these commands need to be ran before the repository is opened
 	if command == "agent" || command == "create" || command == "version" || command == "stdio" || command == "help" {
-		cmd, err := subcommands.Parse(ctx, nil, command, args)
-		if err != nil {
+		_, cmd, args := subcommands.Match(args)
+		if err := cmd.Parse(ctx, nil, args); err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 			return 1
 		}
+
 		retval, err := cmd.Execute(ctx, nil)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
@@ -332,8 +336,13 @@ func entryPoint() int {
 
 	// commands below all operate on an open repository
 	t0 := time.Now()
-	cmd, err := subcommands.Parse(ctx, repo, command, args)
-	if err != nil {
+	found, cmd, args := subcommands.Match(args)
+	if !found {
+		fmt.Fprintf(os.Stderr, "unknown command: %s\n", command)
+		return 1
+	}
+
+	if err := cmd.Parse(ctx, repo, args); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}

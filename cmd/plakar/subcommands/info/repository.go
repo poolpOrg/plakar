@@ -1,6 +1,7 @@
 package info
 
 import (
+	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -16,6 +17,19 @@ type InfoRepository struct {
 
 func (cmd *InfoRepository) Name() string {
 	return "info_repository"
+}
+
+func (cmd *InfoRepository) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("info", flag.ExitOnError)
+	flags.Parse(args)
+
+	if flags.NArg() != 0 {
+		return fmt.Errorf("usage: %s [snapshot|object|state|packfile|vfs|errors]", flags.Name())
+	}
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	return nil
 }
 
 func (cmd *InfoRepository) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {

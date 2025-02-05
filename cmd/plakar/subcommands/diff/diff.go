@@ -35,32 +35,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("diff", parse_cmd_diff)
-}
-
-func parse_cmd_diff(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_highlight bool
-	flags := flag.NewFlagSet("diff", flag.ExitOnError)
-	flags.BoolVar(&opt_highlight, "highlight", false, "highlight output")
-	flags.Parse(args)
-
-	if flags.NArg() != 2 {
-		fmt.Println("args", flags.Args())
-		log.Fatalf("%s: needs two snapshot ID and/or snapshot files to diff", flag.CommandLine.Name())
-	}
-
-	snapshotPrefix1, pathname1 := utils.ParseSnapshotID(flags.Arg(0))
-	snapshotPrefix2, pathname2 := utils.ParseSnapshotID(flags.Arg(1))
-
-	return &Diff{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Highlight:          opt_highlight,
-		SnapshotPrefix1:    snapshotPrefix1,
-		Pathname1:          pathname1,
-		SnapshotPrefix2:    snapshotPrefix2,
-		Pathname2:          pathname2,
-	}, nil
+	subcommands.Register(&Diff{}, "diff")
 }
 
 type Diff struct {
@@ -72,6 +47,25 @@ type Diff struct {
 	Pathname1       string
 	SnapshotPrefix2 string
 	Pathname2       string
+}
+
+func (cmd *Diff) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("diff", flag.ExitOnError)
+	flags.BoolVar(&cmd.Highlight, "highlight", false, "highlight output")
+	flags.Parse(args)
+
+	if flags.NArg() != 2 {
+		fmt.Println("args", flags.Args())
+		log.Fatalf("%s: needs two snapshot ID and/or snapshot files to diff", flag.CommandLine.Name())
+	}
+
+	cmd.SnapshotPrefix1, cmd.Pathname1 = utils.ParseSnapshotID(flags.Arg(0))
+	cmd.SnapshotPrefix2, cmd.Pathname2 = utils.ParseSnapshotID(flags.Arg(1))
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+
+	return nil
 }
 
 func (cmd *Diff) Name() string {

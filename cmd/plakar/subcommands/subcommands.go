@@ -2,7 +2,9 @@ package subcommands
 
 import (
 	"fmt"
+	"slices"
 	"sort"
+	"strings"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/repository"
@@ -10,29 +12,50 @@ import (
 )
 
 type Subcommand interface {
+	Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error
 	Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error)
 }
 
-type parseArgsFn func(*appcontext.AppContext, *repository.Repository, []string) (Subcommand, error)
-
-var subcommands map[string]parseArgsFn = make(map[string]parseArgsFn)
-
-func Register(command string, fn parseArgsFn) {
-	subcommands[command] = fn
+type subcmd struct {
+	args  []string
+	nargs int
+	cmd   Subcommand
 }
 
-func Parse(ctx *appcontext.AppContext, repo *repository.Repository, command string, args []string) (Subcommand, error) {
-	parsefn, exists := subcommands[command]
-	if !exists {
-		return nil, fmt.Errorf("unknown command: %s", command)
+var subcommands []subcmd
+
+func Register(cmd Subcommand, args ...string) {
+	if len(args) == 0 {
+		panic(fmt.Sprintf("zero arguments for %+v", cmd))
 	}
-	return parsefn(ctx, repo, args)
+
+	subcommands = append(subcommands, subcmd{
+		args:  args,
+		nargs: len(args),
+		cmd:   cmd,
+	})
+}
+
+func Match(arguments []string) (bool, Subcommand, []string) {
+	nargs := len(arguments)
+	for _, subcmd := range subcommands {
+		if nargs < subcmd.nargs {
+			continue
+		}
+		if !slices.Equal(subcmd.args, arguments[:subcmd.nargs]) {
+			continue
+		}
+
+		return true, subcmd.cmd, arguments[subcmd.nargs:]
+	}
+
+	return false, nil, nil
 }
 
 func List() []string {
 	var list []string
-	for command := range subcommands {
-		list = append(list, command)
+	for _, command := range subcommands {
+		list = append(list, strings.Join(command.args, " "))
 	}
 	sort.Strings(list)
 	return list

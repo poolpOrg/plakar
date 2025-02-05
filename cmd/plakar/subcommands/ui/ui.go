@@ -32,30 +32,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("ui", parse_cmd_ui)
-}
-
-func parse_cmd_ui(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_addr string
-	var opt_cors bool
-	var opt_noauth bool
-	var opt_nospawn bool
-
-	flags := flag.NewFlagSet("ui", flag.ExitOnError)
-	flags.StringVar(&opt_addr, "addr", "", "address to listen on")
-	flags.BoolVar(&opt_cors, "cors", false, "enable CORS")
-	flags.BoolVar(&opt_noauth, "no-auth", false, "don't use authentication")
-	flags.BoolVar(&opt_nospawn, "no-spawn", false, "don't spawn browser")
-	flags.Parse(args)
-
-	return &Ui{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Addr:               opt_addr,
-		Cors:               opt_cors,
-		NoAuth:             opt_noauth,
-		NoSpawn:            opt_nospawn,
-	}, nil
+	subcommands.Register(&Ui{}, "ui")
 }
 
 type Ui struct {
@@ -66,6 +43,20 @@ type Ui struct {
 	Cors    bool
 	NoAuth  bool
 	NoSpawn bool
+}
+
+func (cmd *Ui) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("ui", flag.ExitOnError)
+	flags.StringVar(&cmd.Addr, "addr", "", "address to listen on")
+	flags.BoolVar(&cmd.Cors, "cors", false, "enable CORS")
+	flags.BoolVar(&cmd.NoAuth, "no-auth", false, "don't use authentication")
+	flags.BoolVar(&cmd.NoSpawn, "no-spawn", false, "don't spawn browser")
+	flags.Parse(args)
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+
+	return nil
 }
 
 func (cmd *Ui) Name() string {

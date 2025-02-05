@@ -33,29 +33,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("cat", parse_cmd_cat)
-}
-
-func parse_cmd_cat(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_nodecompress bool
-	var opt_highlight bool
-
-	flags := flag.NewFlagSet("cat", flag.ExitOnError)
-	flags.BoolVar(&opt_nodecompress, "no-decompress", false, "do not try to decompress output")
-	flags.BoolVar(&opt_highlight, "highlight", false, "highlight output")
-	flags.Parse(args)
-
-	if flags.NArg() == 0 {
-		return nil, fmt.Errorf("at least one parameter is required")
-	}
-
-	return &Cat{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		NoDecompress:       opt_nodecompress,
-		Highlight:          opt_highlight,
-		Paths:              flags.Args(),
-	}, nil
+	subcommands.Register(&Cat{}, "cat")
 }
 
 type Cat struct {
@@ -65,6 +43,22 @@ type Cat struct {
 	NoDecompress bool
 	Highlight    bool
 	Paths        []string
+}
+
+func (cmd *Cat) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("cat", flag.ExitOnError)
+	flags.BoolVar(&cmd.NoDecompress, "no-decompress", false, "do not try to decompress output")
+	flags.BoolVar(&cmd.Highlight, "highlight", false, "highlight output")
+	flags.Parse(args)
+
+	if flags.NArg() == 0 {
+		return fmt.Errorf("at least one parameter is required")
+	}
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Paths = flags.Args()
+	return nil
 }
 
 func (cmd *Cat) Name() string {

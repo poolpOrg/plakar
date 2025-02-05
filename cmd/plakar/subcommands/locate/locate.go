@@ -30,22 +30,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("locate", parse_cmd_locate)
-}
-
-func parse_cmd_locate(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_snapshot string
-
-	flags := flag.NewFlagSet("locate", flag.ExitOnError)
-	flags.StringVar(&opt_snapshot, "snapshot", "", "snapshot to locate in")
-	flags.Parse(args)
-
-	return &Locate{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Snapshot:           opt_snapshot,
-		Patterns:           flags.Args(),
-	}, nil
+	subcommands.Register(&Locate{}, "locate")
 }
 
 type Locate struct {
@@ -54,6 +39,18 @@ type Locate struct {
 
 	Snapshot string
 	Patterns []string
+}
+
+func (cmd *Locate) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("locate", flag.ExitOnError)
+	flags.StringVar(&cmd.Snapshot, "snapshot", "", "snapshot to locate in")
+	flags.Parse(args)
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Patterns = flags.Args()
+
+	return nil
 }
 
 func (cmd *Locate) Name() string {

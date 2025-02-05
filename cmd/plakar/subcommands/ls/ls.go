@@ -35,32 +35,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("ls", parse_cmd_ls)
-}
-
-func parse_cmd_ls(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_recursive bool
-	var opt_tag string
-	var opt_uuid bool
-
-	flags := flag.NewFlagSet("ls", flag.ExitOnError)
-	flags.BoolVar(&opt_uuid, "uuid", false, "display uuid instead of short ID")
-	flags.StringVar(&opt_tag, "tag", "", "filter by tag")
-	flags.BoolVar(&opt_recursive, "recursive", false, "recursive listing")
-	flags.Parse(args)
-
-	if flags.NArg() > 1 {
-		return nil, fmt.Errorf("too many arguments")
-	}
-
-	return &Ls{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Recursive:          opt_recursive,
-		Tag:                opt_tag,
-		DisplayUUID:        opt_uuid,
-		Path:               flags.Arg(0),
-	}, nil
+	subcommands.Register(&Ls{}, "ls")
 }
 
 type Ls struct {
@@ -71,6 +46,24 @@ type Ls struct {
 	Tag         string
 	DisplayUUID bool
 	Path        string
+}
+
+func (cmd *Ls) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("ls", flag.ExitOnError)
+	flags.BoolVar(&cmd.DisplayUUID, "uuid", false, "display uuid instead of short ID")
+	flags.StringVar(&cmd.Tag, "tag", "", "filter by tag")
+	flags.BoolVar(&cmd.Recursive, "recursive", false, "recursive listing")
+	flags.Parse(args)
+
+	if flags.NArg() > 1 {
+		return fmt.Errorf("too many arguments")
+	}
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Path = flags.Arg(0)
+
+	return nil
 }
 
 func (cmd *Ls) Name() string {

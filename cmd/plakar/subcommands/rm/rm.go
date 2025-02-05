@@ -35,18 +35,26 @@ import (
 )
 
 func init() {
-	subcommands.Register("rm", parse_cmd_rm)
+	subcommands.Register(&Rm{}, "rm")
 }
 
-func parse_cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
+type Rm struct {
+	RepositoryLocation string
+	RepositorySecret   []byte
+
+	Tag        string
+	BeforeDate time.Time
+	Prefixes   []string
+}
+
+func (cmd *Rm) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	var opt_older string
-	var opt_tag string
+
 	flags := flag.NewFlagSet("rm", flag.ExitOnError)
-	flags.StringVar(&opt_tag, "tag", "", "filter by tag")
+	flags.StringVar(&cmd.Tag, "tag", "", "filter by tag")
 	flags.StringVar(&opt_older, "older", "", "remove snapshots older than this date")
 	flags.Parse(args)
 
-	var beforeDate time.Time
 	if opt_older != "" {
 		now := time.Now()
 
@@ -69,7 +77,7 @@ func parse_cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args 
 					if err != nil {
 						continue
 					} else {
-						beforeDate = parsedTime
+						cmd.BeforeDate = parsedTime
 						found = true
 						break
 					}
@@ -101,31 +109,20 @@ func parse_cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args 
 					}
 				}
 
-				beforeDate = now.Add(-duration)
+				cmd.BeforeDate = now.Add(-duration)
 			}
 		}
 	}
 
-	if flags.NArg() == 0 && opt_older == "" && opt_tag == "" {
+	if flags.NArg() == 0 && opt_older == "" && cmd.Tag == "" {
 		log.Fatalf("%s: need at least one snapshot ID to rm", flag.CommandLine.Name())
 	}
 
-	return &Rm{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Tag:                opt_tag,
-		BeforeDate:         beforeDate,
-		Prefixes:           flags.Args(),
-	}, nil
-}
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Prefixes = flags.Args()
 
-type Rm struct {
-	RepositoryLocation string
-	RepositorySecret   []byte
-
-	Tag        string
-	BeforeDate time.Time
-	Prefixes   []string
+	return nil
 }
 
 func (cmd *Rm) Name() string {

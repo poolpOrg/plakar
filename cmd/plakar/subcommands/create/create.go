@@ -33,33 +33,27 @@ import (
 )
 
 func init() {
-	subcommands.Register("create", parse_cmd_create)
-}
-
-func parse_cmd_create(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	var opt_noencryption bool
-	var opt_nocompression bool
-
-	flags := flag.NewFlagSet("create", flag.ExitOnError)
-	flags.BoolVar(&opt_noencryption, "no-encryption", false, "disable transparent encryption")
-	flags.BoolVar(&opt_nocompression, "no-compression", false, "disable transparent compression")
-	flags.Parse(args)
-
-	if flags.NArg() > 1 {
-		return nil, fmt.Errorf("%s: too many parameters", flag.CommandLine.Name())
-	}
-
-	return &Create{
-		NoEncryption:  opt_noencryption,
-		NoCompression: opt_nocompression,
-		Location:      flags.Arg(0),
-	}, nil
+	subcommands.Register(&Create{}, "create")
 }
 
 type Create struct {
 	NoEncryption  bool
 	NoCompression bool
 	Location      string
+}
+
+func (cmd *Create) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("create", flag.ExitOnError)
+	flags.BoolVar(&cmd.NoEncryption, "no-encryption", false, "disable transparent encryption")
+	flags.BoolVar(&cmd.NoCompression, "no-compression", false, "disable transparent compression")
+	flags.Parse(args)
+
+	if flags.NArg() > 1 {
+		return fmt.Errorf("%s: too many parameters", flag.CommandLine.Name())
+	}
+
+	cmd.Location = flags.Arg(0)
+	return nil
 }
 
 func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {

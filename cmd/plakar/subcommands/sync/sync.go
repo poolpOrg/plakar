@@ -37,17 +37,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("sync", parse_cmd_sync)
-}
-
-func parse_cmd_sync(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	flags := flag.NewFlagSet("sync", flag.ExitOnError)
-	flags.Parse(args)
-	return &Sync{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Args:               flags.Args(),
-	}, nil
+	subcommands.Register(&Sync{}, "sync")
 }
 
 type Sync struct {
@@ -55,6 +45,16 @@ type Sync struct {
 	RepositorySecret   []byte
 
 	Args []string
+}
+
+func (cmd *Sync) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("sync", flag.ExitOnError)
+	flags.Parse(args)
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Args = flags.Args()
+	return nil
 }
 
 func (cmd *Sync) Name() string {

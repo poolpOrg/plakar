@@ -25,22 +25,21 @@ import (
 )
 
 func init() {
-	subcommands.Register("cleanup", parse_cmd_cleanup)
-}
-
-func parse_cmd_cleanup(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	flags := flag.NewFlagSet("cleanup", flag.ExitOnError)
-	flags.Parse(args)
-
-	return &Cleanup{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-	}, nil
+	subcommands.Register(&Cleanup{}, "cleanup")
 }
 
 type Cleanup struct {
 	RepositoryLocation string
 	RepositorySecret   []byte
+}
+
+func (cmd *Cleanup) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("cleanup", flag.ExitOnError)
+	flags.Parse(args)
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	return nil
 }
 
 func (cmd *Cleanup) Name() string {

@@ -33,22 +33,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("mount", parse_cmd_mount)
-}
-
-func parse_cmd_mount(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
-	flags := flag.NewFlagSet("mount", flag.ExitOnError)
-	flags.Parse(args)
-
-	if flags.NArg() != 1 {
-		ctx.GetLogger().Error("need mountpoint")
-		return nil, fmt.Errorf("need mountpoint")
-	}
-	return &Mount{
-		RepositoryLocation: repo.Location(),
-		RepositorySecret:   ctx.GetSecret(),
-		Mountpoint:         flags.Arg(0),
-	}, nil
+	subcommands.Register(&Mount{}, "mount")
 }
 
 type Mount struct {
@@ -56,6 +41,19 @@ type Mount struct {
 	RepositorySecret   []byte
 
 	Mountpoint string
+}
+
+func (cmd *Mount) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("mount", flag.ExitOnError)
+	flags.Parse(args)
+
+	if flags.NArg() != 1 {
+		return fmt.Errorf("need mountpoint")
+	}
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	return nil
 }
 
 func (cmd *Mount) Name() string {

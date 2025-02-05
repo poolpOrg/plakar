@@ -3,6 +3,7 @@ package info
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -23,6 +24,16 @@ type InfoState struct {
 
 func (cmd *InfoState) Name() string {
 	return "info_state"
+}
+
+func (cmd *InfoState) Parse(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	flags := flag.NewFlagSet("info errors", flag.ExitOnError)
+	flags.Parse(args)
+
+	cmd.RepositoryLocation = repo.Location()
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Args = flags.Args()
+	return nil
 }
 
 func (cmd *InfoState) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
