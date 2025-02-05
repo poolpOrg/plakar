@@ -35,11 +35,9 @@ type Repository struct {
 	configuration storage.Configuration
 
 	appContext *appcontext.AppContext
-
-	secret []byte
 }
 
-func New(ctx *appcontext.AppContext, store storage.Store, secret []byte) (*Repository, error) {
+func New(ctx *appcontext.AppContext, store storage.Store) (*Repository, error) {
 	t0 := time.Now()
 	defer func() {
 		ctx.GetLogger().Trace("repository", "New(store=%p): %s", store, time.Since(t0))
@@ -49,7 +47,6 @@ func New(ctx *appcontext.AppContext, store storage.Store, secret []byte) (*Repos
 		store:         store,
 		configuration: store.Configuration(),
 		appContext:    ctx,
-		secret:        secret,
 	}
 
 	if err := r.RebuildState(); err != nil {
@@ -59,7 +56,7 @@ func New(ctx *appcontext.AppContext, store storage.Store, secret []byte) (*Repos
 	return r, nil
 }
 
-func NewNoRebuild(ctx *appcontext.AppContext, store storage.Store, secret []byte) (*Repository, error) {
+func NewNoRebuild(ctx *appcontext.AppContext, store storage.Store) (*Repository, error) {
 	t0 := time.Now()
 	defer func() {
 		ctx.GetLogger().Trace("repository", "NewNoRebuild(store=%p): %s", store, time.Since(t0))
@@ -69,7 +66,6 @@ func NewNoRebuild(ctx *appcontext.AppContext, store storage.Store, secret []byte
 		store:         store,
 		configuration: store.Configuration(),
 		appContext:    ctx,
-		secret:        secret,
 	}
 
 	return r, nil
@@ -174,8 +170,8 @@ func (r *Repository) Decode(input io.Reader) (io.Reader, error) {
 	}()
 
 	stream := input
-	if r.secret != nil {
-		tmp, err := encryption.DecryptStream(r.secret, stream)
+	if r.AppContext().GetSecret() != nil {
+		tmp, err := encryption.DecryptStream(r.AppContext().GetSecret(), stream)
 		if err != nil {
 			return nil, err
 		}
@@ -208,8 +204,8 @@ func (r *Repository) Encode(input io.Reader) (io.Reader, error) {
 		stream = tmp
 	}
 
-	if r.secret != nil {
-		tmp, err := encryption.EncryptStream(r.secret, stream)
+	if r.AppContext().GetSecret() != nil {
+		tmp, err := encryption.EncryptStream(r.AppContext().GetSecret(), stream)
 		if err != nil {
 			return nil, err
 		}

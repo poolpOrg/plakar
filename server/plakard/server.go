@@ -88,7 +88,7 @@ func handleConnection(ctx *appcontext.AppContext, repo *repository.Repository, r
 				if err != nil {
 					retErr = err.Error()
 				}
-				lrepository, err = repository.New(ctx, st, nil)
+				lrepository, err = repository.New(ctx, st)
 				if err != nil {
 					retErr = err.Error()
 				}
@@ -116,7 +116,7 @@ func handleConnection(ctx *appcontext.AppContext, repo *repository.Repository, r
 				if err != nil {
 					retErr = err.Error()
 				}
-				lrepository, err = repository.New(ctx, st, nil)
+				lrepository, err = repository.New(ctx, st)
 				if err != nil {
 					retErr = err.Error()
 				}

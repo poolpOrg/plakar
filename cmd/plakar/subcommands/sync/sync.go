@@ -86,6 +86,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		return 1, err
 	}
 
+	peerCtx := appcontext.NewAppContextFrom(ctx)
 	var peerSecret []byte
 	if peerStore.Configuration().Encryption != nil {
 		for {
@@ -105,10 +106,11 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 				continue
 			}
 			peerSecret = key
+			peerCtx.SetSecret(peerSecret)
 			break
 		}
 	}
-	peerRepository, err := repository.New(ctx, peerStore, peerSecret)
+	peerRepository, err := repository.New(peerCtx, peerStore)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: could not open repository: %s\n", peerStore.Location(), err)
 		return 1, err

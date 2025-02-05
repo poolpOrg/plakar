@@ -317,7 +317,7 @@ func _TestSnapshotPathParam(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-			repo, err := repository.New(ctx, lstore, nil)
+			repo, err := repository.New(ctx, lstore)
 			require.NoError(t, err, "creating repository")
 
 			req, err := http.NewRequest("GET", "/path/{id}", nil)

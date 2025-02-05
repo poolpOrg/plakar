@@ -33,7 +33,7 @@ func _Test_RepositoryConfiguration(t *testing.T) {
 	defer cache.Close()
 	ctx.SetCache(cache)
 	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-	repo, err := repository.New(ctx, lstore, nil)
+	repo, err := repository.New(ctx, lstore)
 	require.NoError(t, err, "creating repository")
 
 	var noToken string
@@ -301,7 +301,7 @@ func _Test_RepositorySnapshots(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-			repo, err := repository.New(ctx, lstore, nil)
+			repo, err := repository.New(ctx, lstore)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -389,7 +389,7 @@ func _Test_RepositorySnapshotsErrors(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-			repo, err := repository.New(ctx, lstore, nil)
+			repo, err := repository.New(ctx, lstore)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -452,7 +452,7 @@ func _Test_RepositoryStates(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-			repo, err := repository.New(ctx, lstore, nil)
+			repo, err := repository.New(ctx, lstore)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -509,7 +509,7 @@ func _Test_RepositoryState(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-			repo, err := repository.New(ctx, lstore, nil)
+			repo, err := repository.New(ctx, lstore)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -571,7 +571,7 @@ func Test_RepositoryStateErrors(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-			repo, err := repository.New(ctx, lstore, nil)
+			repo, err := repository.New(ctx, lstore)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -621,7 +621,7 @@ func _Test_RepositoryPackfiles(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-			repo, err := repository.New(ctx, lstore, nil)
+			repo, err := repository.New(ctx, lstore)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -675,7 +675,7 @@ func _Test_RepositoryPackfilesErrors(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-			repo, err := repository.New(ctx, lstore, nil)
+			repo, err := repository.New(ctx, lstore)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -720,7 +720,7 @@ func Test_RepositoryPackfile(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-			repo, err := repository.New(ctx, lstore, nil)
+			repo, err := repository.New(ctx, lstore)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -810,7 +810,7 @@ func Test_RepositoryPackfileErrors(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-			repo, err := repository.New(ctx, lstore, nil)
+			repo, err := repository.New(ctx, lstore)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string

@@ -34,7 +34,7 @@ func TestAuthMiddleware(t *testing.T) {
 	defer cache.Close()
 	ctx.SetCache(cache)
 	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-	repo, err := repository.New(ctx, lstore, nil)
+	repo, err := repository.New(ctx, lstore)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func Test_UnknownEndpoint(t *testing.T) {
 	defer cache.Close()
 	ctx.SetCache(cache)
 	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-	repo, err := repository.New(ctx, lstore, nil)
+	repo, err := repository.New(ctx, lstore)
 	if err != nil {
 		t.Fatal(err)
 	}

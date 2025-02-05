@@ -317,13 +317,13 @@ func entryPoint() int {
 
 	var repo *repository.Repository
 	if opt_agentless && command != "server" {
-		repo, err = repository.New(ctx, store, secret)
+		repo, err = repository.New(ctx, store)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 			return 1
 		}
 	} else {
-		repo, err = repository.NewNoRebuild(ctx, store, secret)
+		repo, err = repository.NewNoRebuild(ctx, store)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 			return 1

@@ -570,6 +570,9 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 				subcommand = &cmd.Subcommand
 				repositoryLocation = cmd.Subcommand.RepositoryLocation
 				repositorySecret = cmd.Subcommand.RepositorySecret
+				if repositorySecret != nil {
+					clientContext.SetSecret(repositorySecret)
+				}
 			}
 
 			var repo *repository.Repository
@@ -582,16 +585,12 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 				}
 				defer store.Close()
 
-				repo, err = repository.New(clientContext, store, clientContext.GetSecret())
+				repo, err = repository.New(clientContext, store)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to open repository: %s\n", err)
 					return
 				}
 				defer repo.Close()
-			}
-
-			if repositorySecret != nil {
-				clientContext.SetSecret(repositorySecret)
 			}
 
 			eventsDone := make(chan struct{})
