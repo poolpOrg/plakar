@@ -553,6 +553,7 @@ func (ls *LocalState) GetSubpartForBlob(Type resources.Type, blobMAC objects.MAC
 		return objects.MAC{}, 0, 0, false
 	} else {
 		de, _ := DeltaEntryFromBytes(delta)
+
 		return de.Location.Packfile, de.Location.Offset, de.Location.Length, true
 	}
 }
@@ -614,13 +615,17 @@ func (ls *LocalState) ListObjectsOfType(Type resources.Type) iter.Seq2[DeltaEntr
 
 }
 
-func (ls *LocalState) DeleteSnapshot(snapshotID objects.MAC) error {
+func (ls *LocalState) DeleteResource(rtype resources.Type, resource objects.MAC) error {
 	de := DeletedEntry{
-		Type: resources.RT_SNAPSHOT,
-		Blob: snapshotID,
+		Type: rtype,
+		Blob: resource,
 		When: time.Now(),
 	}
-	return ls.cache.PutDeleted(resources.RT_SNAPSHOT, snapshotID, de.ToBytes())
+	return ls.cache.PutDeleted(de.Type, de.Blob, de.ToBytes())
+}
+
+func (ls *LocalState) HasDeletedResource(rtype resources.Type, resource objects.MAC) (bool, error) {
+	return ls.cache.HasDeleted(rtype, resource)
 }
 
 func (mt *Metadata) ToBytes() ([]byte, error) {

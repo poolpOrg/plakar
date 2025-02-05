@@ -17,13 +17,17 @@
 package cleanup
 
 import (
+	"bytes"
+	"crypto/rand"
 	"flag"
 	"fmt"
+	"io"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/repository"
+	"github.com/PlakarKorp/plakar/resources"
 	"github.com/PlakarKorp/plakar/snapshot"
 )
 
@@ -96,10 +100,49 @@ func (cmd *Cleanup) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		snapshot.Close()
 	}
 
-	fmt.Fprintf(ctx.Stdout, "cleanup: not implemented yet\n")
+	// This random id generation for non snapshot state should probably be encapsulated somewhere.
+	var identifier objects.Checksum
+	n, err := rand.Read(identifier[:])
+	if err != nil {
+		return 1, err
+	}
+	if n != len(identifier) {
+		return 1, io.ErrShortWrite
+	}
+
+	sc, err := repo.AppContext().GetCache().Scan(identifier)
+	if err != nil {
+		return 1, err
+	}
+
+	// First pass, coloring, we just flag those packfiles as being selected for deletion.
+	// For now we keep the same serial so that those delete gets merged in.
+	// Once we do the real deletion we will rebuild the aggregated view
+	// excluding those ressources alltogether.
+	deltaState := repo.NewStateDelta(sc)
+
 	fmt.Fprintf(ctx.Stdout, "cleanup: packfiles to remove: %d\n", len(packfiles))
 	for packfile := range packfiles {
-		fmt.Fprintf(ctx.Stdout, "cleanup: packfile: %x\n", packfile)
+		has, err := repo.HasDeletedPackfile(packfile)
+		if err != nil {
+			return 1, err
+		}
+
+		if !has {
+			fmt.Fprintf(ctx.Stdout, "cleanup: packfile: %x\n", packfile)
+			if err := deltaState.DeleteResource(resources.RT_PACKFILE, packfile); err != nil {
+				return 1, err
+			}
+		}
+	}
+
+	buf := &bytes.Buffer{}
+	if err := deltaState.SerializeToStream(buf); err != nil {
+		return 1, err
+	}
+
+	if err := repo.PutState(identifier, buf); err != nil {
+		return 1, err
 	}
 
 	return 0, nil
