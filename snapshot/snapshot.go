@@ -257,6 +257,97 @@ func (snap *Snapshot) ListObjects() (iter.Seq2[objects.MAC, error], error) {
 	}, nil
 }
 
+func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error) {
+	pvfs, err := snap.Filesystem()
+	if err != nil {
+		return nil, err
+	}
+	_ = pvfs
+
+	return func(yield func(objects.Checksum, error) bool) {
+		packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_SNAPSHOT, snap.Header.Identifier)
+		if !exists {
+			if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+				return
+			}
+		}
+		if !yield(packfile, nil) {
+			return
+		}
+
+		if snap.Header.Identity.Identifier != uuid.Nil {
+			packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_SIGNATURE, snap.Header.Identifier)
+			if !exists {
+				if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+					return
+				}
+			}
+			if !yield(packfile, nil) {
+				return
+			}
+		}
+
+		packfile, exists = snap.repository.GetPackfileForBlob(resources.RT_VFS, snap.Header.Sources[0].VFS)
+		if !exists {
+			if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+				return
+			}
+		}
+		if !yield(packfile, nil) {
+			return
+		}
+
+		// do that for all objects
+
+		pvfs.WalkDir("/", func(path string, entry *vfs.Entry, err error) error {
+			if err != nil {
+				if !yield(objects.Checksum{}, err) {
+					return err
+				}
+			}
+			serializeEntry, err := entry.ToBytes()
+			checksum := snap.repository.Checksum(serializeEntry)
+			packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_VFS_ENTRY, checksum)
+			if !exists {
+				if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+					return err
+				}
+			}
+			if !yield(packfile, nil) {
+				return nil
+			}
+
+			if entry.Object != nil {
+				packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_OBJECT, entry.Object.Checksum)
+				if !exists {
+					if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+						return err
+					}
+				}
+				if !yield(packfile, nil) {
+					return nil
+				}
+
+				for _, chunk := range entry.Object.Chunks {
+					packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_CHUNK, chunk.Checksum)
+					if !exists {
+						if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+							return err
+						}
+					}
+					if !yield(packfile, nil) {
+						return nil
+					}
+				}
+
+			}
+
+			return nil
+		})
+
+	}, nil
+}
+
 func (snap *Snapshot) Logger() *logging.Logger {
 	return snap.AppContext().GetLogger()
 }

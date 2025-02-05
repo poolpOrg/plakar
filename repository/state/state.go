@@ -567,7 +567,7 @@ func (ls *LocalState) PutPackfile(stateId, packfile objects.MAC) error {
 	return ls.cache.PutPackfile(pe.StateID, pe.Packfile, pe.ToBytes())
 }
 
-func (ls *LocalState) ListPackfiles(stateId objects.MAC) iter.Seq[objects.MAC] {
+func (ls *LocalState) ListPackfilesForState(stateId objects.MAC) iter.Seq[objects.MAC] {
 	return func(yield func(objects.MAC) bool) {
 		for st, _ := range ls.cache.GetPackfilesForState(stateId) {
 			if !yield(st) {
@@ -577,14 +577,24 @@ func (ls *LocalState) ListPackfiles(stateId objects.MAC) iter.Seq[objects.MAC] {
 	}
 }
 
+func (ls *LocalState) ListPackfiles() iter.Seq[objects.MAC] {
+	return func(yield func(objects.MAC) bool) {
+		for st, _ := range ls.cache.GetPackfiles() {
+			if !yield(st) {
+				return
+			}
+		}
+	}
+}
+
 func (ls *LocalState) ListSnapshots() iter.Seq[objects.MAC] {
 	return func(yield func(objects.MAC) bool) {
-		for csum, _ := range ls.cache.GetDeltasByType(resources.RT_SNAPSHOT) {
-			if has, _ := ls.cache.HasDeleted(resources.RT_SNAPSHOT, csum); has {
+		for mac, _ := range ls.cache.GetDeltasByType(resources.RT_SNAPSHOT) {
+			if has, _ := ls.cache.HasDeleted(resources.RT_SNAPSHOT, mac); has {
 				continue
 			}
 
-			if !yield(csum) {
+			if !yield(mac) {
 				return
 			}
 		}

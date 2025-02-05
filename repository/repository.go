@@ -576,6 +576,16 @@ func (r *Repository) DeletePackfile(mac objects.MAC) error {
 	return r.store.DeletePackfile(mac)
 }
 
+func (r *Repository) GetPackfileForBlob(Type resources.Type, mac objects.MAC) (packfile objects.MAC, exists bool) {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "GetPackfileForBlob(%x): %s", mac, time.Since(t0))
+	}()
+
+	packfile, _, _, exists = r.state.GetSubpartForBlob(Type, mac)
+	return
+}
+
 func (r *Repository) GetBlob(Type resources.Type, mac objects.MAC) (io.ReadSeeker, error) {
 	t0 := time.Now()
 	defer func() {
@@ -609,6 +619,14 @@ func (r *Repository) ListSnapshots() iter.Seq[objects.MAC] {
 		r.Logger().Trace("repository", "ListSnapshots(): %s", time.Since(t0))
 	}()
 	return r.state.ListSnapshots()
+}
+
+func (r *Repository) ListPackfiles() iter.Seq[objects.MAC] {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "ListPackfiles(): %s", time.Since(t0))
+	}()
+	return r.state.ListPackfiles()
 }
 
 func (r *Repository) Logger() *logging.Logger {
