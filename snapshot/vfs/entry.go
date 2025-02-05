@@ -52,9 +52,6 @@ type Entry struct {
 	Classifications []Classification `msgpack:"classifications,omitempty" json:"classifications"`
 	CustomMetadata  []CustomMetadata `msgpack:"custom_metadata,omitempty" json:"custom_metadata"`
 	Tags            []string         `msgpack:"tags,omitempty" json:"tags"`
-
-	/* Errors */
-	Errors *objects.Checksum `msgpack:"errors,omitempty" json:"errors,omitempty"`
 }
 
 // Return empty lists for nil slices.

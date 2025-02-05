@@ -49,7 +49,6 @@ const (
 type Metadata struct {
 	Version   versioning.Version `msgpack:"version"`
 	Timestamp time.Time          `msgpack:"timestamp"`
-	Aggregate bool               `msgpack:"aggregate"`
 	Serial    uuid.UUID          `msgpack:"serial"`
 }
 
@@ -98,7 +97,6 @@ func NewLocalState(cache caching.StateCache) *LocalState {
 		Metadata: Metadata{
 			Version:   versioning.FromString(VERSION),
 			Timestamp: time.Now(),
-			Aggregate: false,
 		},
 		cache: cache,
 	}
@@ -220,15 +218,6 @@ func (ls *LocalState) SerializeToStream(w io.Writer) error {
 	if err := writeUint64(uint64(timestamp)); err != nil {
 		return fmt.Errorf("failed to write timestamp: %w", err)
 	}
-	if ls.Metadata.Aggregate {
-		if _, err := w.Write([]byte{1}); err != nil {
-			return fmt.Errorf("failed to write aggregate flag: %w", err)
-		}
-	} else {
-		if _, err := w.Write([]byte{0}); err != nil {
-			return fmt.Errorf("failed to write aggregate flag: %w", err)
-		}
-	}
 	if _, err := w.Write(ls.Metadata.Serial[:]); err != nil {
 		return fmt.Errorf("failed to write serial flag: %w", err)
 	}
@@ -348,7 +337,6 @@ func (ls *LocalState) deserializeFromStream(r io.Reader) error {
 	if _, err := io.ReadFull(r, aggregate); err != nil {
 		return fmt.Errorf("failed to read aggregate flag: %w", err)
 	}
-	ls.Metadata.Aggregate = aggregate[0] == 1
 
 	serial := make([]byte, len(uuid.UUID{}))
 	if _, err := io.ReadFull(r, serial); err != nil {

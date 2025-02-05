@@ -33,6 +33,8 @@ type Storer[K any, P any, V any] interface {
 }
 
 type Node[K any, P any, V any] struct {
+	Version versioning.Version `msgpack:"version"`
+
 	// An intermediate node has only Keys and Pointers, while
 	// leaves have only keys and values and optionally a next
 	// pointer.
@@ -42,6 +44,7 @@ type Node[K any, P any, V any] struct {
 	Keys     []K `msgpack:"keys"`
 	Pointers []P `msgpack:"pointers"`
 	Values   []V `msgpack:"values"`
+	Prev     *P  `msgpack:"prev,omitempty"` // unused for now
 	Next     *P  `msgpack:"next,omitempty"`
 }
 
@@ -49,7 +52,9 @@ type Node[K any, P any, V any] struct {
 // value stored, and P is a pointer type: it could be a disk sector,
 // a checksum in a packfile, or a key in a leveldb cache.  or more.
 type BTree[K any, P any, V any] struct {
+	Version versioning.Version
 	Order   int
+	Count   int
 	Root    P
 	store   Storer[K, P, V]
 	compare func(K, K) int
@@ -76,6 +81,7 @@ func New[K any, P any, V any](store Storer[K, P, V], compare func(K, K) int, ord
 // created via New().
 func FromStorage[K any, P any, V any](root P, store Storer[K, P, V], compare func(K, K) int, order int) *BTree[K, P, V] {
 	return &BTree[K, P, V]{
+		Version: versioning.FromString(BTREE_VERSION),
 		Order:   order,
 		Root:    root,
 		store:   store,
@@ -93,6 +99,7 @@ func Deserialize[K, P, V any](rd io.Reader, store Storer[K, P, V], compare func(
 
 func newNodeFrom[K, P, V any](keys []K, pointers []P, values []V) *Node[K, P, V] {
 	node := &Node[K, P, V]{
+		Version:  versioning.FromString(BTREE_NODE_VERSION),
 		Keys:     make([]K, len(keys)),
 		Pointers: make([]P, len(pointers)),
 		Values:   make([]V, len(values)),
@@ -209,6 +216,8 @@ func (b *BTree[K, P, V]) insert(key K, val V, overwrite bool) error {
 		return ErrExists
 	}
 
+	b.Count++
+
 	node.insertAt(idx, key, val)
 	if len(node.Keys) < b.Order {
 		return b.store.Update(ptr, node)
@@ -268,6 +277,7 @@ func (b *BTree[K, P, V]) insertUpwards(key K, ptr P, path []P) error {
 
 	// reached the root, growing the tree
 	newroot := &Node[K, P, V]{
+		Version:  versioning.FromString(BTREE_NODE_VERSION),
 		Keys:     []K{key},
 		Pointers: []P{b.Root, ptr},
 	}
