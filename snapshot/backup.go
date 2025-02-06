@@ -774,10 +774,10 @@ func (snap *Snapshot) PutPackfile(packer *Packer) error {
 	serializedPackfile = append(serializedPackfile, versionBytes...)
 	serializedPackfile = append(serializedPackfile, byte(encryptedFooterLength))
 
-	checksum := snap.repository.Checksum(serializedPackfile)
+	hmacsum := snap.repository.ChecksumHMAC(serializedPackfile)
 
-	repo.Logger().Trace("snapshot", "%x: PutPackfile(%x, ...)", snap.Header.GetIndexShortID(), checksum)
-	err = snap.repository.PutPackfile(checksum, bytes.NewBuffer(serializedPackfile))
+	repo.Logger().Trace("snapshot", "%x: PutPackfile(%x, ...)", snap.Header.GetIndexShortID(), hmacsum)
+	err = snap.repository.PutPackfile(hmacsum, bytes.NewBuffer(serializedPackfile))
 	if err != nil {
 		panic("could not write pack file")
 	}
@@ -790,7 +790,7 @@ func (snap *Snapshot) PutPackfile(packer *Packer) error {
 						Type: blob.Type,
 						Blob: blobChecksum,
 						Location: state.Location{
-							Packfile: checksum,
+							Packfile: hmacsum,
 							Offset:   packer.Packfile.Index[idx].Offset,
 							Length:   packer.Packfile.Index[idx].Length,
 						},
@@ -806,7 +806,7 @@ func (snap *Snapshot) PutPackfile(packer *Packer) error {
 		}
 	}
 
-	if err := snap.deltaState.PutPackfile(snap.Header.Identifier, checksum); err != nil {
+	if err := snap.deltaState.PutPackfile(snap.Header.Identifier, hmacsum); err != nil {
 		return err
 	}
 
