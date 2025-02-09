@@ -159,7 +159,10 @@ func (b *BTree[K, P, V]) verifyNode(cur, parent *Node[K, P, V], ptrIdx int, stat
 }
 
 func (b *BTree[K, P, V]) Dot(w io.Writer, showNextPtrs bool) error {
-	return b.VisitDFS(func(ptr P, n *Node[K, P, V]) error {
+	iter := b.IterDFS()
+	for iter.Next() {
+		ptr, n := iter.Current()
+
 		fmt.Fprintf(w, "%v [label=%q]\n", ptr, fmt.Sprintf("%v %v", ptr, n.Keys))
 		for _, cptr := range n.Pointers {
 			fmt.Fprintf(w, "%v -> %v\n", ptr, cptr)
@@ -167,6 +170,7 @@ func (b *BTree[K, P, V]) Dot(w io.Writer, showNextPtrs bool) error {
 		if showNextPtrs && n.Next != nil {
 			fmt.Fprintf(w, "%v -> %v\n", ptr, *n.Next)
 		}
-		return nil
-	})
+	}
+
+	return iter.Err()
 }

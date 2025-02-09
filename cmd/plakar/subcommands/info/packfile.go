@@ -2,7 +2,6 @@ package info
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -90,28 +89,28 @@ func (cmd *InfoPackfile) Execute(ctx *appcontext.AppContext, repo *repository.Re
 				return 1, err
 			}
 
-			hasher := sha256.New()
+			hasher := repo.HasherHMAC()
 			hasher.Write(indexbuf)
 
-			if !bytes.Equal(hasher.Sum(nil), footer.IndexChecksum[:]) {
-				return 1, fmt.Errorf("index checksum mismatch")
+			if !bytes.Equal(hasher.Sum(nil), footer.IndexHMAC[:]) {
+				return 1, fmt.Errorf("index HMAC mismatch")
 			}
 
 			rawPackfile = append(rawPackfile, indexbuf...)
 			rawPackfile = append(rawPackfile, footerbuf...)
 
-			p, err := packfile.NewFromBytes(rawPackfile)
+			p, err := packfile.NewFromBytes(hasher, rawPackfile)
 			if err != nil {
 				return 1, err
 			}
 
 			fmt.Fprintf(ctx.Stdout, "Version: %d.%d.%d\n", p.Footer.Version/100, p.Footer.Version%100/10, p.Footer.Version%10)
 			fmt.Fprintf(ctx.Stdout, "Timestamp: %s\n", time.Unix(0, p.Footer.Timestamp))
-			fmt.Fprintf(ctx.Stdout, "Index checksum: %x\n", p.Footer.IndexChecksum)
+			fmt.Fprintf(ctx.Stdout, "Index HMAC: %x\n", p.Footer.IndexHMAC)
 			fmt.Fprintln(ctx.Stdout)
 
 			for i, entry := range p.Index {
-				fmt.Fprintf(ctx.Stdout, "blob[%d]: %x %d %d %s\n", i, entry.Checksum, entry.Offset, entry.Length, entry.Type)
+				fmt.Fprintf(ctx.Stdout, "blob[%d]: %x %d %d %s\n", i, entry.HMAC, entry.Offset, entry.Length, entry.Type)
 			}
 		}
 	}

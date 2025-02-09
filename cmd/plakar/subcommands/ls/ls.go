@@ -44,6 +44,12 @@ func parse_cmd_ls(ctx *appcontext.AppContext, repo *repository.Repository, args 
 	var opt_uuid bool
 
 	flags := flag.NewFlagSet("ls", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
 	flags.BoolVar(&opt_uuid, "uuid", false, "display uuid instead of short ID")
 	flags.StringVar(&opt_tag, "tag", "", "filter by tag")
 	flags.BoolVar(&opt_recursive, "recursive", false, "recursive listing")
@@ -132,7 +138,11 @@ func list_snapshots(ctx *appcontext.AppContext, repo *repository.Repository, use
 
 func list_snapshot(ctx *appcontext.AppContext, repo *repository.Repository, snapshotPath string, recursive bool) error {
 	prefix, pathname := utils.ParseSnapshotID(snapshotPath)
-	pathname = path.Clean(pathname)
+	if pathname == "" {
+		pathname = "/"
+	} else {
+		pathname = path.Clean(pathname)
+	}
 
 	snap, err := utils.OpenSnapshotByPrefix(repo, prefix)
 	if err != nil {

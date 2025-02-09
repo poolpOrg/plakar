@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"time"
 
@@ -40,13 +39,19 @@ func parse_cmd_archive(ctx *appcontext.AppContext, repo *repository.Repository, 
 	var opt_format string
 
 	flags := flag.NewFlagSet("archive", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
 	flags.StringVar(&opt_output, "output", "", "archive pathname")
 	flags.BoolVar(&opt_rebase, "rebase", false, "strip pathname when pulling")
-	flags.StringVar(&opt_format, "format", "tarball", "archive format")
+	flags.StringVar(&opt_format, "format", "tarball", "archive format: tar, tarball, zip")
 	flags.Parse(args)
 
 	if flags.NArg() == 0 {
-		log.Fatalf("%s: need at least one snapshot ID to pull", flag.CommandLine.Name())
+		return nil, fmt.Errorf("need at least one snapshot ID to pull")
 	}
 
 	supportedFormats := map[string]string{
@@ -55,7 +60,7 @@ func parse_cmd_archive(ctx *appcontext.AppContext, repo *repository.Repository, 
 		"zip":     ".zip",
 	}
 	if _, ok := supportedFormats[opt_format]; !ok {
-		log.Fatalf("%s: unsupported format %s", flag.CommandLine.Name(), opt_format)
+		return nil, fmt.Errorf("unsupported format %s", opt_format)
 	}
 
 	if opt_output == "" {

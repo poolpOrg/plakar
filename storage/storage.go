@@ -81,7 +81,7 @@ type Store interface {
 	GetPackfiles() ([]objects.Checksum, error)
 	PutPackfile(checksum objects.Checksum, rd io.Reader) error
 	GetPackfile(checksum objects.Checksum) (io.Reader, error)
-	GetPackfileBlob(checksum objects.Checksum, offset uint32, length uint32) (io.Reader, error)
+	GetPackfileBlob(checksum objects.Checksum, offset uint64, length uint32) (io.Reader, error)
 	DeletePackfile(checksum objects.Checksum) error
 
 	Close() error

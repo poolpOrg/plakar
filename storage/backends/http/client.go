@@ -256,7 +256,7 @@ func (repo *Repository) GetPackfile(checksum objects.Checksum) (io.Reader, error
 	return bytes.NewBuffer(resGetPackfile.Data), nil
 }
 
-func (repo *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint32, length uint32) (io.Reader, error) {
+func (repo *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint64, length uint32) (io.Reader, error) {
 	r, err := repo.sendRequest("GET", repo.Repository, "/packfile/blob", network.ReqGetPackfileBlob{
 		Checksum: checksum,
 		Offset:   offset,

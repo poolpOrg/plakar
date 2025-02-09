@@ -28,6 +28,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
+	github.com/wagslane/go-password-validator v0.3.0
 	github.com/whilp/git-urls v1.0.0
 	go.omarpolo.com/ttlmap v0.0.0-20231012080932-0154c95c7516
 	golang.org/x/crypto v0.31.0

@@ -134,7 +134,7 @@ func (repository *Repository) Open(location string) error {
 
 	exists, err := repository.minioClient.BucketExists(context.Background(), repository.bucketName)
 	if err != nil {
-		return err
+		return fmt.Errorf("error checking if bucket exists: %w", err)
 	}
 	if !exists {
 		return fmt.Errorf("bucket does not exist")
@@ -142,36 +142,36 @@ func (repository *Repository) Open(location string) error {
 
 	object, err := repository.minioClient.GetObject(context.Background(), repository.bucketName, "CONFIG", minio.GetObjectOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting object: %w", err)
 	}
 	stat, err := object.Stat()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting object stat: %w", err)
 	}
 
 	compressed := make([]byte, stat.Size)
 	_, err = object.Read(compressed)
 	if err != nil {
 		if err != io.EOF {
-			return err
+			return fmt.Errorf("error reading object: %w", err)
 		}
 	}
 	object.Close()
 
 	jconfig, err := compression.InflateStream("GZIP", bytes.NewReader(compressed))
 	if err != nil {
-		return err
+		return fmt.Errorf("error inflating stream: %w", err)
 	}
 
 	data, err := io.ReadAll(jconfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("error reading inflated stream: %w", err)
 	}
 
 	var config storage.Configuration
 	err = msgpack.Unmarshal(data, &config)
 	if err != nil {
-		return err
+		return fmt.Errorf("error unmarshalling configuration: %w", err)
 	}
 
 	repository.config = config
@@ -274,9 +274,9 @@ func (repository *Repository) GetPackfile(checksum objects.Checksum) (io.Reader,
 	return object, nil
 }
 
-func (repository *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint32, length uint32) (io.Reader, error) {
+func (repository *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint64, length uint32) (io.Reader, error) {
 	opts := minio.GetObjectOptions{}
-	opts.SetRange(int64(offset), int64(offset+length))
+	opts.SetRange(int64(offset), int64(offset+uint64(length)))
 	object, err := repository.minioClient.GetObject(context.Background(), repository.bucketName, fmt.Sprintf("packfiles/%02x/%016x", checksum[0], checksum), opts)
 	if err != nil {
 		return nil, err
@@ -286,7 +286,7 @@ func (repository *Repository) GetPackfileBlob(checksum objects.Checksum, offset 
 		return nil, err
 	}
 
-	if stat.Size < int64(offset+length) {
+	if stat.Size < int64(offset+uint64(length)) {
 		return nil, fmt.Errorf("invalid range")
 	}
 

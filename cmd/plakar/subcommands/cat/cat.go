@@ -41,6 +41,12 @@ func parse_cmd_cat(ctx *appcontext.AppContext, repo *repository.Repository, args
 	var opt_highlight bool
 
 	flags := flag.NewFlagSet("cat", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
 	flags.BoolVar(&opt_nodecompress, "no-decompress", false, "do not try to decompress output")
 	flags.BoolVar(&opt_highlight, "highlight", false, "highlight output")
 	flags.Parse(args)
@@ -98,6 +104,7 @@ func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 		}
 
 		entry, err := fs.GetEntry(pathname)
+
 		if err != nil {
 			ctx.GetLogger().Error("cat: %s: no such file", pathname)
 			errors++
@@ -114,7 +121,7 @@ func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 		var rd io.ReadCloser = file
 
 		if !cmd.NoDecompress {
-			if entry.Object.ContentType == "application/gzip" && !cmd.NoDecompress {
+			if entry.ResolvedObject.ContentType == "application/gzip" && !cmd.NoDecompress {
 				gzRd, err := gzip.NewReader(rd)
 				if err != nil {
 					ctx.GetLogger().Error("cat: %s: %s", pathname, err)
@@ -129,7 +136,7 @@ func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 		if cmd.Highlight {
 			lexer := lexers.Match(pathname)
 			if lexer == nil {
-				lexer = lexers.Get(entry.Object.ContentType)
+				lexer = lexers.Get(entry.ResolvedObject.ContentType)
 			}
 			if lexer == nil {
 				lexer = lexers.Fallback // Fallback if no lexer is found

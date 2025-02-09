@@ -54,10 +54,7 @@ func (cmd *InfoSnapshot) Execute(ctx *appcontext.AppContext, repo *repository.Re
 		fmt.Fprintf(ctx.Stdout, " - PublicKey: %s\n", base64.RawStdEncoding.EncodeToString(header.Identity.PublicKey))
 	}
 
-	fmt.Fprintf(ctx.Stdout, "Root: %x\n", header.GetSource(0).VFS)
-	fmt.Fprintf(ctx.Stdout, "Index: %x\n", header.GetSource(0).Index)
-	fmt.Fprintf(ctx.Stdout, "Metadata: %x\n", header.GetSource(0).Metadata)
-	fmt.Fprintf(ctx.Stdout, "Statistics: %x\n", header.GetSource(0).Statistics)
+	fmt.Fprintf(ctx.Stdout, "VFS: %x\n", header.GetSource(0).VFS)
 
 	fmt.Fprintln(ctx.Stdout, "Importer:")
 	fmt.Fprintf(ctx.Stdout, " - Type: %s\n", header.GetSource(0).Importer.Type)

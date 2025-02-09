@@ -38,6 +38,12 @@ func parse_cmd_checksum(ctx *appcontext.AppContext, repo *repository.Repository,
 	var enableFastChecksum bool
 
 	flags := flag.NewFlagSet("checksum", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
 	flags.BoolVar(&enableFastChecksum, "fast", false, "enable fast checksum (return recorded checksum)")
 
 	flags.Parse(args)
@@ -118,7 +124,7 @@ func displayChecksums(ctx *appcontext.AppContext, fs *vfs.Filesystem, repo *repo
 		return nil
 	}
 
-	object, err := snap.LookupObject(fsinfo.Object.Checksum)
+	object, err := snap.LookupObject(fsinfo.Object)
 	if err != nil {
 		return err
 	}

@@ -19,7 +19,6 @@ package rm
 import (
 	"flag"
 	"fmt"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -42,6 +41,12 @@ func parse_cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args 
 	var opt_older string
 	var opt_tag string
 	flags := flag.NewFlagSet("rm", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] SNAPSHOT...\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
 	flags.StringVar(&opt_tag, "tag", "", "filter by tag")
 	flags.StringVar(&opt_older, "older", "", "remove snapshots older than this date")
 	flags.Parse(args)
@@ -51,7 +56,7 @@ func parse_cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args 
 		now := time.Now()
 
 		if reg, err := regexp.Compile(`^(\d)\s?([[:alpha:]]+)$`); err != nil {
-			log.Fatalf("invalid regexp: %s", opt_older)
+			return nil, fmt.Errorf("invalid regexp: %s", opt_older)
 		} else {
 
 			matches := reg.FindStringSubmatch(opt_older)
@@ -75,13 +80,13 @@ func parse_cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args 
 					}
 				}
 				if !found {
-					log.Fatalf("invalid date format: %s", opt_older)
+					return nil, fmt.Errorf("invalid date format: %s", opt_older)
 				}
 			} else {
 				var duration time.Duration
 
 				if num, err := strconv.ParseInt(matches[1], 0, 64); err != nil {
-					log.Fatalf("invalid date format: %s", opt_older)
+					return nil, fmt.Errorf("invalid date format: %s", opt_older)
 				} else {
 					switch strings.ToLower(matches[2]) {
 					case "minutes", "minute", "mins", "min", "m":
@@ -97,7 +102,7 @@ func parse_cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args 
 					case "years", "year":
 						duration = 365 * 24 * time.Hour * time.Duration(num)
 					default:
-						log.Fatalf("invalid date format: %s", opt_older)
+						return nil, fmt.Errorf("invalid date format: %s", opt_older)
 					}
 				}
 
@@ -107,7 +112,7 @@ func parse_cmd_rm(ctx *appcontext.AppContext, repo *repository.Repository, args 
 	}
 
 	if flags.NArg() == 0 && opt_older == "" && opt_tag == "" {
-		log.Fatalf("%s: need at least one snapshot ID to rm", flag.CommandLine.Name())
+		return nil, fmt.Errorf("%s: need at least one snapshot ID to rm", flag.CommandLine.Name())
 	}
 
 	return &Rm{
@@ -138,20 +143,20 @@ func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 		if len(cmd.Prefixes) != 0 {
 			tmp, err := utils.GetSnapshots(repo, cmd.Prefixes)
 			if err != nil {
-				log.Fatal(err)
+				return 1, err
 			}
 			snapshots = tmp
 		} else {
 			tmp, err := utils.GetSnapshots(repo, nil)
 			if err != nil {
-				log.Fatal(err)
+				return 1, err
 			}
 			snapshots = tmp
 		}
 	} else {
 		tmp, err := utils.GetSnapshots(repo, cmd.Prefixes)
 		if err != nil {
-			log.Fatal(err)
+			return 1, err
 		}
 		snapshots = tmp
 	}

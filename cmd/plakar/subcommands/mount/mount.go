@@ -22,7 +22,6 @@ package mount
 import (
 	"flag"
 	"fmt"
-	"log"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
@@ -38,6 +37,9 @@ func init() {
 
 func parse_cmd_mount(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("mount", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s PATH\n", flags.Name())
+	}
 	flags.Parse(args)
 
 	if flags.NArg() != 1 {
@@ -70,7 +72,7 @@ func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		fuse.LocalVolume(),
 	)
 	if err != nil {
-		log.Fatalf("Mount: %v", err)
+		return 1, fmt.Errorf("mount: %v", err)
 	}
 	defer c.Close()
 	ctx.GetLogger().Info("mounted repository %s at %s", repo.Location(), cmd.Mountpoint)

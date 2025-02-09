@@ -90,7 +90,7 @@ func storagePackfile(w http.ResponseWriter, r *http.Request) error {
 
 	var rd io.Reader
 	if offsetExists && lengthExists {
-		rd, err = lstore.GetPackfileBlob(packfileBytes32, uint32(offset), uint32(length))
+		rd, err = lstore.GetPackfileBlob(packfileBytes32, uint64(offset), uint32(length))
 		if err != nil {
 			return err
 		}

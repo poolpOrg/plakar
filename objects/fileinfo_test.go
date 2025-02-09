@@ -229,8 +229,4 @@ func TestFileInfoFromStat(t *testing.T) {
 	if fileInfo.Groupname() != groupname {
 		t.Errorf("expected Groupname %v, got %v", groupname, fileInfo.Lgroupname)
 	}
-
-	if fileInfo.Sys() != nil {
-		t.Errorf("expected nil, got %v", fileInfo.Sys())
-	}
 }

@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"bytes"
+	"hash"
 	"io"
 	"runtime"
 	"sync"
@@ -10,11 +11,13 @@ import (
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/packfile"
 	"github.com/PlakarKorp/plakar/resources"
+	"github.com/PlakarKorp/plakar/versioning"
 )
 
 type PackerMsg struct {
 	Timestamp time.Time
 	Type      resources.Type
+	Version   versioning.Version
 	Checksum  objects.Checksum
 	Data      []byte
 }
@@ -24,23 +27,23 @@ type Packer struct {
 	Packfile *packfile.PackFile
 }
 
-func NewPacker() *Packer {
+func NewPacker(hasher hash.Hash) *Packer {
 	blobs := make(map[resources.Type]map[[32]byte][]byte)
 	for _, Type := range resources.Types() {
 		blobs[Type] = make(map[[32]byte][]byte)
 	}
 	return &Packer{
-		Packfile: packfile.New(),
+		Packfile: packfile.New(hasher),
 		Blobs:    blobs,
 	}
 }
 
-func (packer *Packer) AddBlob(Type resources.Type, checksum [32]byte, data []byte) {
+func (packer *Packer) AddBlob(Type resources.Type, version versioning.Version, checksum [32]byte, data []byte) {
 	if _, ok := packer.Blobs[Type]; !ok {
 		packer.Blobs[Type] = make(map[[32]byte][]byte)
 	}
 	packer.Blobs[Type][checksum] = data
-	packer.Packfile.AddBlob(Type, checksum, data)
+	packer.Packfile.AddBlob(Type, version, checksum, data)
 }
 
 func (packer *Packer) Size() uint32 {
@@ -65,14 +68,14 @@ func packerJob(snap *Snapshot) {
 
 			for msg := range snap.packerChan {
 				if packer == nil {
-					packer = NewPacker()
+					packer = NewPacker(snap.Repository().HasherHMAC())
 				}
 
 				if msg, ok := msg.(*PackerMsg); !ok {
 					panic("received data with unexpected type")
 				} else {
-					snap.Logger().Trace("packer", "%x: PackerMsg(%d, %064x), dt=%s", snap.Header.GetIndexShortID(), msg.Type, msg.Checksum, time.Since(msg.Timestamp))
-					packer.AddBlob(msg.Type, msg.Checksum, msg.Data)
+					snap.Logger().Trace("packer", "%x: PackerMsg(%d, %s, %064x), dt=%s", snap.Header.GetIndexShortID(), msg.Type, msg.Version, msg.Checksum, time.Since(msg.Timestamp))
+					packer.AddBlob(msg.Type, msg.Version, msg.Checksum, msg.Data)
 				}
 
 				if packer.Size() > uint32(snap.repository.Configuration().Packfile.MaxSize) {
@@ -99,7 +102,7 @@ func packerJob(snap *Snapshot) {
 }
 
 func (snap *Snapshot) PutBlob(Type resources.Type, checksum [32]byte, data []byte) error {
-	snap.Logger().Trace("snapshot", "%x: PutBlob(%d, %064x) len=%d", snap.Header.GetIndexShortID(), Type, checksum, len(data))
+	snap.Logger().Trace("snapshot", "%x: PutBlob(%s, %064x) len=%d", snap.Header.GetIndexShortID(), Type, checksum, len(data))
 
 	encodedReader, err := snap.repository.Encode(bytes.NewReader(data))
 	if err != nil {
@@ -111,18 +114,23 @@ func (snap *Snapshot) PutBlob(Type resources.Type, checksum [32]byte, data []byt
 		return err
 	}
 
-	snap.packerChan <- &PackerMsg{Type: Type, Timestamp: time.Now(), Checksum: checksum, Data: encoded}
+	if Type != resources.RT_SNAPSHOT {
+		checksum = snap.repository.ChecksumHMAC(checksum[:])
+	}
+	snap.packerChan <- &PackerMsg{Type: Type, Version: versioning.GetCurrentVersion(Type), Timestamp: time.Now(), Checksum: checksum, Data: encoded}
 	return nil
 }
 
 func (snap *Snapshot) GetBlob(Type resources.Type, checksum [32]byte) ([]byte, error) {
-	snap.Logger().Trace("snapshot", "%x: GetBlob(%x)", snap.Header.GetIndexShortID(), checksum)
+	snap.Logger().Trace("snapshot", "%x: GetBlob(%s, %x)", snap.Header.GetIndexShortID(), Type, checksum)
 
 	// XXX: Temporary workaround, once the state API changes to get from both sources (delta+aggregated state)
 	// we can remove this hack.
 	if snap.deltaState != nil {
+		if Type != resources.RT_SNAPSHOT {
+			checksum = snap.repository.ChecksumHMAC(checksum[:])
+		}
 		packfileChecksum, offset, length, exists := snap.deltaState.GetSubpartForBlob(Type, checksum)
-
 		if exists {
 			rd, err := snap.repository.GetPackfileBlob(packfileChecksum, offset, length)
 			if err != nil {
@@ -143,11 +151,15 @@ func (snap *Snapshot) GetBlob(Type resources.Type, checksum [32]byte) ([]byte, e
 }
 
 func (snap *Snapshot) BlobExists(Type resources.Type, checksum [32]byte) bool {
-	snap.Logger().Trace("snapshot", "%x: CheckBlob(%064x)", snap.Header.GetIndexShortID(), checksum)
+	snap.Logger().Trace("snapshot", "%x: CheckBlob(%s, %064x)", snap.Header.GetIndexShortID(), Type, checksum)
 
 	// XXX: Same here, remove this workaround when state API changes.
 	if snap.deltaState != nil {
-		return snap.deltaState.BlobExists(Type, checksum) || snap.repository.BlobExists(Type, checksum)
+		hmacsum := checksum
+		if Type != resources.RT_SNAPSHOT {
+			hmacsum = snap.repository.ChecksumHMAC(checksum[:])
+		}
+		return snap.deltaState.BlobExists(Type, hmacsum) || snap.repository.BlobExists(Type, checksum)
 	} else {
 		return snap.repository.BlobExists(Type, checksum)
 	}

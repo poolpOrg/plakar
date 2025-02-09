@@ -110,7 +110,7 @@ func (repository *Repository) GetPackfile(checksum objects.Checksum) (io.Reader,
 	return bytes.NewBuffer([]byte{}), nil
 }
 
-func (repository *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint32, length uint32) (io.Reader, error) {
+func (repository *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint64, length uint32) (io.Reader, error) {
 	return bytes.NewBuffer([]byte{}), nil
 }
 

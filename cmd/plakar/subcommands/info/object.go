@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/objects"
@@ -54,10 +53,6 @@ func (cmd *InfoObject) Execute(ctx *appcontext.AppContext, repo *repository.Repo
 
 	fmt.Fprintf(ctx.Stdout, "object: %x\n", object.Checksum)
 	fmt.Fprintln(ctx.Stdout, "  type:", object.ContentType)
-	if len(object.Tags) > 0 {
-		fmt.Fprintln(ctx.Stdout, "  tags:", strings.Join(object.Tags, ","))
-	}
-
 	fmt.Fprintln(ctx.Stdout, "  chunks:")
 	for _, chunk := range object.Chunks {
 		fmt.Fprintf(ctx.Stdout, "    checksum: %x\n", chunk.Checksum)

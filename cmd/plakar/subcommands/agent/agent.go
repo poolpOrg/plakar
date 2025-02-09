@@ -66,7 +66,13 @@ func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, ar
 	var opt_prometheus string
 
 	flags := flag.NewFlagSet("agent", flag.ExitOnError)
-	flags.StringVar(&opt_prometheus, "prometheus", "", "prometheus exporter interface")
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
+	flags.StringVar(&opt_prometheus, "prometheus", "", "prometheus exporter interface, e.g. 127.0.0.1:9090")
 	flags.Parse(args)
 
 	return &Agent{

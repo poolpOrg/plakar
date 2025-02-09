@@ -19,7 +19,6 @@ package check
 import (
 	"flag"
 	"fmt"
-	"log"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
@@ -40,6 +39,12 @@ func parse_cmd_check(ctx *appcontext.AppContext, repo *repository.Repository, ar
 	var opt_quiet bool
 
 	flags := flag.NewFlagSet("check", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
 	flags.Uint64Var(&opt_concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
 	flags.BoolVar(&opt_noVerify, "no-verify", false, "disable signature verification")
 	flags.BoolVar(&opt_fastCheck, "fast", false, "enable fast checking (no checksum verification)")
@@ -94,7 +99,7 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		snapshotPrefix, pathname := utils.ParseSnapshotID(arg)
 		snap, err := utils.OpenSnapshotByPrefix(repo, snapshotPrefix)
 		if err != nil {
-			log.Fatal(err)
+			return 1, err
 		}
 
 		if !cmd.NoVerify && snap.Header.Identity.Identifier != uuid.Nil {

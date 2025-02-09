@@ -30,6 +30,7 @@ import (
 	"github.com/PlakarKorp/plakar/hashing"
 	"github.com/PlakarKorp/plakar/repository"
 	"github.com/PlakarKorp/plakar/storage"
+	passwordvalidator "github.com/wagslane/go-password-validator"
 )
 
 func init() {
@@ -39,8 +40,17 @@ func init() {
 func parse_cmd_create(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_noencryption bool
 	var opt_nocompression bool
+	var opt_allowweak bool
 
 	flags := flag.NewFlagSet("create", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] /path/to/repository\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "       %s [OPTIONS] s3://bucket/path\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
+	flags.BoolVar(&opt_allowweak, "weak-passphrase", false, "allow weak passphrase to protect the repository")
 	flags.BoolVar(&opt_noencryption, "no-encryption", false, "disable transparent encryption")
 	flags.BoolVar(&opt_nocompression, "no-compression", false, "disable transparent compression")
 	flags.Parse(args)
@@ -50,6 +60,7 @@ func parse_cmd_create(ctx *appcontext.AppContext, repo *repository.Repository, a
 	}
 
 	return &Create{
+		AllowWeak:     opt_allowweak,
 		NoEncryption:  opt_noencryption,
 		NoCompression: opt_nocompression,
 		Location:      flags.Arg(0),
@@ -57,6 +68,7 @@ func parse_cmd_create(ctx *appcontext.AppContext, repo *repository.Repository, a
 }
 
 type Create struct {
+	AllowWeak     bool
 	NoEncryption  bool
 	NoCompression bool
 	Location      string
@@ -100,6 +112,15 @@ func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 
 		if len(passphrase) == 0 {
 			return 1, fmt.Errorf("can't encrypt the repository with an empty passphrase")
+		}
+
+		if !cmd.AllowWeak {
+			// keepass considers < 80 bits as weak
+			minEntropBits := 80.
+			err := passwordvalidator.Validate(string(passphrase), minEntropBits)
+			if err != nil {
+				return 1, fmt.Errorf("passphrase is too weak: %s", err)
+			}
 		}
 
 		salt, err := encryption.Salt()

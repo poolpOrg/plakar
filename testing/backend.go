@@ -35,7 +35,7 @@ var behaviors = map[string]mockedBackendBehavior{
 	},
 	"oneState": {
 		statesChecksums:    []objects.Checksum{{0x01}, {0x02}, {0x03}, {0x04}},
-		header:             header.Header{Timestamp: time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC), Identifier: [32]byte{0x1}, Sources: []*header.Source{&header.Source{VFS: objects.Checksum{0x01}}}},
+		header:             header.Header{Timestamp: time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC), Identifier: [32]byte{0x1}, Sources: []header.Source{{VFS: objects.Checksum{0x01}}}},
 		packfilesChecksums: []objects.Checksum{{0x04}, {0x05}, {0x06}},
 	},
 	"oneSnapshot": {
@@ -168,7 +168,7 @@ func (mb *MockBackend) GetPackfile(checksum objects.Checksum) (io.Reader, error)
 	}
 }
 
-func (mb *MockBackend) GetPackfileBlob(checksum objects.Checksum, offset uint32, length uint32) (io.Reader, error) {
+func (mb *MockBackend) GetPackfileBlob(checksum objects.Checksum, offset uint64, length uint32) (io.Reader, error) {
 	if mb.behavior == "brokenGetPackfileBlob" {
 		return nil, errors.New("broken get packfile blob")
 	}

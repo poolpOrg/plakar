@@ -289,7 +289,7 @@ func _TestPlakardBackendTCP(t *testing.T) {
 						var data []byte
 						for _, packfile := range c.packfiles {
 							if packfile.checksum == request.Payload.(network.ReqGetPackfileBlob).Checksum {
-								data = packfile.data[request.Payload.(network.ReqGetPackfileBlob).Offset : request.Payload.(network.ReqGetPackfileBlob).Offset+request.Payload.(network.ReqGetPackfileBlob).Length]
+								data = packfile.data[request.Payload.(network.ReqGetPackfileBlob).Offset : request.Payload.(network.ReqGetPackfileBlob).Offset+uint64(request.Payload.(network.ReqGetPackfileBlob).Length)]
 								break
 							}
 						}

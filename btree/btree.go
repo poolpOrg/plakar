@@ -15,11 +15,9 @@ var (
 )
 
 const BTREE_VERSION = "1.0.0"
-const BTREE_NODE_VERSION = "1.0.0"
 
 func init() {
-	versioning.Register(resources.RT_INDEX, versioning.FromString(BTREE_VERSION))
-	versioning.Register(resources.RT_INDEX_ENTRY, versioning.FromString(BTREE_NODE_VERSION))
+	versioning.Register(resources.RT_BTREE, versioning.FromString(BTREE_VERSION))
 }
 
 type Storer[K any, P any, V any] interface {
@@ -99,7 +97,7 @@ func Deserialize[K, P, V any](rd io.Reader, store Storer[K, P, V], compare func(
 
 func newNodeFrom[K, P, V any](keys []K, pointers []P, values []V) *Node[K, P, V] {
 	node := &Node[K, P, V]{
-		Version:  versioning.FromString(BTREE_NODE_VERSION),
+		Version:  versioning.FromString(BTREE_VERSION),
 		Keys:     make([]K, len(keys)),
 		Pointers: make([]P, len(pointers)),
 		Values:   make([]V, len(values)),
@@ -277,7 +275,7 @@ func (b *BTree[K, P, V]) insertUpwards(key K, ptr P, path []P) error {
 
 	// reached the root, growing the tree
 	newroot := &Node[K, P, V]{
-		Version:  versioning.FromString(BTREE_NODE_VERSION),
+		Version:  versioning.FromString(BTREE_VERSION),
 		Keys:     []K{key},
 		Pointers: []P{b.Root, ptr},
 	}

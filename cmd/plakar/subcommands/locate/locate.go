@@ -37,6 +37,11 @@ func parse_cmd_locate(ctx *appcontext.AppContext, repo *repository.Repository, a
 	var opt_snapshot string
 
 	flags := flag.NewFlagSet("locate", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] PATTERN...\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
 	flags.StringVar(&opt_snapshot, "snapshot", "", "snapshot to locate in")
 	flags.Parse(args)
 

@@ -149,7 +149,7 @@ func (h *MyHandler) GetPackfileBlob(w http.ResponseWriter, r *http.Request) erro
 	var resGetState network.ResGetState
 	for _, packfile := range h.packfiles {
 		if packfile.checksum == reqGetPackfileBlob.Checksum {
-			resGetState.Data = packfile.data[reqGetPackfileBlob.Offset : reqGetPackfileBlob.Offset+reqGetPackfileBlob.Length]
+			resGetState.Data = packfile.data[reqGetPackfileBlob.Offset : reqGetPackfileBlob.Offset+uint64(reqGetPackfileBlob.Length)]
 			break
 		}
 	}

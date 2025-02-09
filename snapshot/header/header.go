@@ -47,25 +47,27 @@ type KeyValue struct {
 	Value string `msgpack:"value" json:"value"`
 }
 
-type Source struct {
-	Importer   Importer         `msgpack:"importer" json:"importer"`
-	VFS        objects.Checksum `msgpack:"root" json:"root"`
-	Errors     objects.Checksum `msgpack:"errors" json:"errors"`
-	Index      objects.Checksum `msgpack:"index" json:"index"`
-	Metadata   objects.Checksum `msgpack:"metadata" json:"metadata"`
-	Statistics objects.Checksum `msgpack:"statistics" json:"statistics"`
-	Summary    vfs.Summary      `msgpack:"summary" json:"summary"`
+type Index struct {
+	Name  string           `msgpack:"name" json:"name"`
+	Type  string           `msgpack:"type" json:"type"`
+	Value objects.Checksum `msgpack:"value" json:"value"`
 }
 
-func NewSource() *Source {
-	return &Source{
-		Importer:   Importer{},
-		VFS:        objects.Checksum{},
-		Errors:     objects.Checksum{},
-		Index:      objects.Checksum{},
-		Metadata:   objects.Checksum{},
-		Statistics: objects.Checksum{},
-		Summary:    vfs.Summary{},
+type Source struct {
+	Importer Importer         `msgpack:"importer" json:"importer"`
+	VFS      objects.Checksum `msgpack:"root" json:"root"`
+	Errors   objects.Checksum `msgpack:"errors" json:"errors"`
+	Indexes  []Index          `msgpack:"indexes" json:"indexes"`
+	Summary  vfs.Summary      `msgpack:"summary" json:"summary"`
+}
+
+func NewSource() Source {
+	return Source{
+		Importer: Importer{},
+		VFS:      objects.Checksum{},
+		Errors:   objects.Checksum{},
+		Indexes:  []Index{},
+		Summary:  vfs.Summary{},
 	}
 }
 
@@ -79,10 +81,12 @@ type Header struct {
 	Category        string             `msgpack:"category" json:"category"`
 	Environment     string             `msgpack:"environment" json:"environment"`
 	Perimeter       string             `msgpack:"perimeter" json:"perimeter"`
+	Job             string             `msgpack:"job" json:"job"`
+	Replicas        uint32             `msgpack:"replicas" json:"replicas"`
 	Classifications []Classification   `msgpack:"classifications" json:"classifications"`
 	Tags            []string           `msgpack:"tags" json:"tags"`
 	Context         []KeyValue         `msgpack:"context" json:"context"`
-	Sources         []*Source          `msgpack:"sources" json:"sources"`
+	Sources         []Source           `msgpack:"sources" json:"sources"`
 }
 
 func NewHeader(name string, identifier objects.Checksum) *Header {
@@ -94,12 +98,14 @@ func NewHeader(name string, identifier objects.Checksum) *Header {
 		Category:        "default",
 		Environment:     "default",
 		Perimeter:       "default",
+		Job:             "default",
+		Replicas:        1,
 		Classifications: []Classification{},
 		Tags:            []string{},
 
 		Identity: Identity{},
 
-		Sources: []*Source{NewSource()},
+		Sources: []Source{NewSource()},
 	}
 }
 
@@ -137,7 +143,7 @@ func (h *Header) GetSource(idx int) *Source {
 	if idx < 0 || idx >= len(h.Sources) {
 		panic("invalid source index")
 	}
-	return h.Sources[idx]
+	return &h.Sources[idx]
 }
 
 func (h *Header) GetIndexID() [32]byte {

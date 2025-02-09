@@ -120,8 +120,8 @@ func (b *BTree[K, P, V]) ScanFrom(key K) (Iterator[K, V], error) {
 }
 
 type step[K, P, V any] struct {
-	ptr  P
-	idx  int
+	ptr P
+	idx int
 }
 
 type backwardIter[K, P, V any] struct {
@@ -139,8 +139,8 @@ func (bit *backwardIter[K, P, V]) dive(ptr P) error {
 		}
 
 		bit.steps = append(bit.steps, step[K, P, V]{
-			ptr:  ptr,
-			idx:  len(node.Keys),
+			ptr: ptr,
+			idx: len(node.Keys),
 		})
 
 		if node.isleaf() {
@@ -212,27 +212,49 @@ func (b *BTree[K, P, V]) ScanAllReverse() (Iterator[K, V], error) {
 	return bit, nil
 }
 
-func (b *BTree[K, P, V]) VisitDFS(cb func(P, *Node[K, P, V]) error) error {
-	stack := []step[K, P, V]{{b.Root, -1}}
-	for len(stack) > 0 {
-		l := &stack[len(stack)-1]
+type dfsIter[K, P, V any] struct {
+	b       *BTree[K, P, V]
+	stack   []step[K, P, V]
+	ptr     P
+	current *Node[K, P, V]
+	err     error
+}
 
-		node, err := b.store.Get(l.ptr)
-		if err != nil {
-			return err
-		}
-		if l.idx == -1 {
-			if err := cb(l.ptr, node); err != nil {
-				return err
-			}
-		}
-		l.idx++
+func (dit *dfsIter[K, P, V]) Next() bool {
+	for dit.err == nil && len(dit.stack) > 0 {
+		s := &dit.stack[len(dit.stack)-1]
 
-		if l.idx == len(node.Pointers) {
-			stack = stack[:len(stack)-1]
+		dit.ptr = s.ptr
+		dit.current, dit.err = dit.b.store.Get(dit.ptr)
+		if dit.err != nil {
+			return false
+		}
+		if s.idx == -1 {
+			s.idx++
+			return true
+		}
+		if s.idx == len(dit.current.Pointers) {
+			dit.stack = dit.stack[:len(dit.stack)-1]
 			continue
 		}
-		stack = append(stack, step[K, P, V]{node.Pointers[l.idx], -1})
+
+		s.idx++
+		dit.stack = append(dit.stack, step[K, P, V]{dit.current.Pointers[s.idx-1], -1})
 	}
-	return nil
+	return false
+}
+
+func (dit *dfsIter[K, P, V]) Current() (P, *Node[K, P, V]) {
+	return dit.ptr, dit.current
+}
+
+func (dit *dfsIter[K, P, V]) Err() error {
+	return dit.err
+}
+
+func (b *BTree[K, P, V]) IterDFS() Iterator[P, *Node[K, P, V]] {
+	return &dfsIter[K, P, V]{
+		b:     b,
+		stack: []step[K, P, V]{{b.Root, -1}},
+	}
 }

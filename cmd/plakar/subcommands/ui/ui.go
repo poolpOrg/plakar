@@ -42,6 +42,12 @@ func parse_cmd_ui(ctx *appcontext.AppContext, repo *repository.Repository, args 
 	var opt_nospawn bool
 
 	flags := flag.NewFlagSet("ui", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
 	flags.StringVar(&opt_addr, "addr", "", "address to listen on")
 	flags.BoolVar(&opt_cors, "cors", false, "enable CORS")
 	flags.BoolVar(&opt_noauth, "no-auth", false, "don't use authentication")

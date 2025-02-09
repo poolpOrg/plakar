@@ -97,7 +97,7 @@ func snapshotReader(w http.ResponseWriter, r *http.Request) error {
 	if do_highlight {
 		lexer := lexers.Match(path)
 		if lexer == nil {
-			lexer = lexers.Get(entry.Object.ContentType)
+			lexer = lexers.Get(entry.ResolvedObject.ContentType)
 		}
 		if lexer == nil {
 			lexer = lexers.Fallback // Fallback if no lexer is found
@@ -389,8 +389,8 @@ func snapshotVFSErrors(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var i int64
-	items := Items[snapshot.ErrorItem]{
-		Items: []snapshot.ErrorItem{},
+	items := Items[*snapshot.ErrorItem]{
+		Items: []*snapshot.ErrorItem{},
 	}
 	for errorEntry := range errorList {
 		if i < offset {

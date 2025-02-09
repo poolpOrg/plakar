@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/btree"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/cmd/plakar/utils"
 	"github.com/PlakarKorp/plakar/encryption"
@@ -42,6 +41,11 @@ func init() {
 
 func parse_cmd_sync(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	flags := flag.NewFlagSet("sync", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [SNAPSHOT] to REPOSITORY\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "       %s [SNAPSHOT] from REPOSITORY\n", flags.Name())
+		flags.PrintDefaults()
+	}
 	flags.Parse(args)
 	return &Sync{
 		RepositoryLocation: repo.Location(),
@@ -76,8 +80,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		peerRepositoryPath = cmd.Args[2]
 
 	default:
-		ctx.GetLogger().Error("usage: sync [snapshotID] to|from repository")
-		return 1, fmt.Errorf("usage: sync [snapshotID] to|from repository")
+		return 1, fmt.Errorf("usage: sync [SNAPSHOT] to|from REPOSITORY")
 	}
 
 	peerStore, err := storage.Open(peerRepositoryPath)
@@ -276,16 +279,20 @@ func synchronize(srcRepository *repository.Repository, dstRepository *repository
 		}
 	}
 
-	fs.VisitNodes(func(csum objects.Checksum, node *btree.Node[string, objects.Checksum, objects.Checksum]) error {
-		if !dstRepository.BlobExists(resources.RT_VFS, csum) {
+	fsiter := fs.IterNodes()
+	for fsiter.Next() {
+		csum, node := fsiter.Current()
+		if !dstRepository.BlobExists(resources.RT_VFS_BTREE, csum) {
 			bytes, err := msgpack.Marshal(node)
 			if err != nil {
 				return err
 			}
-			dstSnapshot.PutBlob(resources.RT_VFS, csum, bytes)
+			dstSnapshot.PutBlob(resources.RT_VFS_BTREE, csum, bytes)
 		}
-		return nil
-	})
+	}
+	if err := fsiter.Err(); err != nil {
+		return err
+	}
 
 	return dstSnapshot.Commit()
 }

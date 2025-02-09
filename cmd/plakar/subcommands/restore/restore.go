@@ -19,7 +19,6 @@ package restore
 import (
 	"flag"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -41,6 +40,12 @@ func parse_cmd_restore(ctx *appcontext.AppContext, repo *repository.Repository, 
 	var opt_quiet bool
 
 	flags := flag.NewFlagSet("restore", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
 	flags.Uint64Var(&opt_concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
 	flags.StringVar(&pullPath, "to", ctx.CWD, "base directory where pull will restore")
 	flags.BoolVar(&pullRebase, "rebase", false, "strip pathname when pulling")
@@ -80,7 +85,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	var err error
 	exporterInstance, err = exporter.NewExporter(cmd.Path)
 	if err != nil {
-		log.Fatal(err)
+		return 1, err
 	}
 	defer exporterInstance.Close()
 
@@ -92,7 +97,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	if len(cmd.Snapshots) == 0 {
 		metadatas, err := utils.GetHeaders(repo, nil)
 		if err != nil {
-			log.Fatal(err)
+			return 1, err
 		}
 
 		for i := len(metadatas); i != 0; i-- {

@@ -18,6 +18,7 @@ package stdio
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
@@ -33,6 +34,12 @@ func parse_cmd_stdio(ctx *appcontext.AppContext, repo *repository.Repository, ar
 	var opt_allowdelete bool
 
 	flags := flag.NewFlagSet("stdio", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
 	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "disable delete operations")
 	flags.Parse(args)
 

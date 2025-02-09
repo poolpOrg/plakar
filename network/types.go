@@ -103,7 +103,7 @@ type ResGetPackfile struct {
 
 type ReqGetPackfileBlob struct {
 	Checksum objects.Checksum
-	Offset   uint32
+	Offset   uint64
 	Length   uint32
 }
 

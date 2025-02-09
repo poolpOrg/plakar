@@ -309,14 +309,18 @@ func TestVisitDFS(t *testing.T) {
 	}
 
 	keySaw := []rune{}
-	tree.VisitDFS(func(ptr int, node *Node[rune, int, int]) error {
+	it := tree.IterDFS()
+	for it.Next() {
+		_, node := it.Current()
 		if node.isleaf() {
 			for i := range node.Keys {
 				keySaw = append(keySaw, node.Keys[i])
 			}
 		}
-		return nil
-	})
+	}
+	if err := it.Err(); err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
 
 	if slices.Compare(alphabet, keySaw) != 0 {
 		t.Errorf("some keys weren't seen; got %v but want %v",

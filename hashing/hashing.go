@@ -1,6 +1,7 @@
 package hashing
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
 	"hash"
@@ -32,6 +33,15 @@ func GetHasher(name string) hash.Hash {
 	switch name {
 	case "SHA256":
 		return sha256.New()
+	default:
+		return nil
+	}
+}
+
+func GetHasherHMAC(name string, secret []byte) hash.Hash {
+	switch name {
+	case "SHA256":
+		return hmac.New(sha256.New, secret)
 	default:
 		return nil
 	}

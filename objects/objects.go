@@ -43,27 +43,13 @@ func (m *Checksum) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type Classification struct {
-	Analyzer string   `msgpack:"analyzer" json:"analyzer"`
-	Classes  []string `msgpack:"classes" json:"classes"`
-}
-
-type CustomMetadata struct {
-	Key   string `msgpack:"key" json:"key"`
-	Value []byte `msgpack:"value" json:"value"`
-}
-
 type Object struct {
-	Version         versioning.Version `msgpack:"version" json:"version"`
-	Checksum        Checksum           `msgpack:"checksum" json:"checksum"`
-	Chunks          []Chunk            `msgpack:"chunks" json:"chunks"`
-	ContentType     string             `msgpack:"content_type,omitempty" json:"content_type"`
-	Classifications []Classification   `msgpack:"classifications,omitempty" json:"classifications"`
-	CustomMetadata  []CustomMetadata   `msgpack:"custom_metadata,omitempty" json:"custom_metadata"`
-	Tags            []string           `msgpack:"tags,omitempty" json:"tags"`
-	Entropy         float64            `msgpack:"entropy,omitempty" json:"entropy"`
-	Distribution    [256]byte          `msgpack:"distribution,omitempty" json:"distribution"`
-	Flags           uint32             `msgpack:"flags" json:"flags"`
+	Version     versioning.Version `msgpack:"version" json:"version"`
+	Checksum    Checksum           `msgpack:"checksum" json:"checksum"`
+	Chunks      []Chunk            `msgpack:"chunks" json:"chunks"`
+	ContentType string             `msgpack:"content_type,omitempty" json:"content_type"`
+	Entropy     float64            `msgpack:"entropy,omitempty" json:"entropy"`
+	Flags       uint64             `msgpack:"flags" json:"flags"`
 }
 
 // Return empty lists for nil slices.
@@ -76,25 +62,12 @@ func (o *Object) MarshalJSON() ([]byte, error) {
 	if ret.Chunks == nil {
 		ret.Chunks = []Chunk{}
 	}
-	if ret.Classifications == nil {
-		ret.Classifications = []Classification{}
-	}
-	if ret.CustomMetadata == nil {
-		ret.CustomMetadata = []CustomMetadata{}
-	}
-	if ret.Tags == nil {
-		ret.Tags = []string{}
-	}
-	if ret.Distribution == [256]byte{} {
-		ret.Distribution = [256]byte{}
-	}
 	return json.Marshal(ret)
 }
 
 func NewObject() *Object {
 	return &Object{
-		Version:        versioning.FromString(OBJECT_VERSION),
-		CustomMetadata: make([]CustomMetadata, 0),
+		Version: versioning.FromString(OBJECT_VERSION),
 	}
 }
 
@@ -103,41 +76,41 @@ func NewObjectFromBytes(serialized []byte) (*Object, error) {
 	if err := msgpack.Unmarshal(serialized, &o); err != nil {
 		return nil, err
 	}
-	if o.CustomMetadata == nil {
-		o.CustomMetadata = make([]CustomMetadata, 0)
-	}
-	if o.Tags == nil {
-		o.Tags = make([]string, 0)
-	}
 	return &o, nil
 }
 
 func (o *Object) Serialize() ([]byte, error) {
-	serialized, err := msgpack.Marshal(o)
-	if err != nil {
-		return nil, err
-	}
-	return serialized, nil
-}
-
-func (o *Object) AddClassification(analyzer string, classes []string) {
-	o.Classifications = append(o.Classifications, Classification{
-		Analyzer: analyzer,
-		Classes:  classes,
-	})
+	return msgpack.Marshal(o)
 }
 
 type Chunk struct {
-	Version      versioning.Version `msgpack:"version" json:"version"`
-	Checksum     Checksum           `msgpack:"checksum" json:"checksum"`
-	Length       uint32             `msgpack:"length" json:"length"`
-	Entropy      float64            `msgpack:"entropy" json:"entropy"`
-	Flags        uint32             `msgpack:"flags" json:"flags"`
-	Distribution [256]byte          `msgpack:"distribution,omitempty" json:"distribution"`
+	Version  versioning.Version `msgpack:"version" json:"version"`
+	Checksum Checksum           `msgpack:"checksum" json:"checksum"`
+	Length   uint32             `msgpack:"length" json:"length"`
+	Entropy  float64            `msgpack:"entropy" json:"entropy"`
+	Flags    uint64             `msgpack:"flags" json:"flags"`
 }
 
 func NewChunk() *Chunk {
 	return &Chunk{
 		Version: versioning.FromString(CHUNK_VERSION),
 	}
+}
+
+func NewChunkFromBytes(serialized []byte) (*Chunk, error) {
+	var c Chunk
+	if err := msgpack.Unmarshal(serialized, &c); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+func (c *Chunk) Serialize() ([]byte, error) {
+	return msgpack.Marshal(c)
+}
+
+func (c *Chunk) MarshalJSON() ([]byte, error) {
+	// Create an alias to avoid recursive MarshalJSON calls
+	type Alias Chunk
+	return json.Marshal((*Alias)(c))
 }

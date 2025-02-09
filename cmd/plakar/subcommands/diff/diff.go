@@ -20,8 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
-	"os"
 	"path"
 
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -41,12 +39,17 @@ func init() {
 func parse_cmd_diff(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_highlight bool
 	flags := flag.NewFlagSet("diff", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] SNAPSHOT:PATH SNAPSHOT[:PATH]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
 	flags.BoolVar(&opt_highlight, "highlight", false, "highlight output")
 	flags.Parse(args)
 
 	if flags.NArg() != 2 {
-		fmt.Println("args", flags.Args())
-		log.Fatalf("%s: needs two snapshot ID and/or snapshot files to diff", flag.CommandLine.Name())
+		return nil, fmt.Errorf("needs two snapshot ID and/or snapshot files to diff")
 	}
 
 	snapshotPrefix1, pathname1 := utils.ParseSnapshotID(flags.Arg(0))
@@ -114,7 +117,7 @@ func (cmd *Diff) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	}
 
 	if cmd.Highlight {
-		err = quick.Highlight(os.Stdout, diff, "diff", "terminal", "dracula")
+		err = quick.Highlight(ctx.Stdout, diff, "diff", "terminal", "dracula")
 		if err != nil {
 			return 1, fmt.Errorf("diff: could not highlight diff: %w", err)
 		}
@@ -181,8 +184,8 @@ func diff_directories(ctx *appcontext.AppContext, dirEntry1 *vfs.Entry, dirEntry
 }
 
 func diff_files(ctx *appcontext.AppContext, snap1 *snapshot.Snapshot, fileEntry1 *vfs.Entry, snap2 *snapshot.Snapshot, fileEntry2 *vfs.Entry) (string, error) {
-	if fileEntry1.Object.Checksum == fileEntry2.Object.Checksum {
-		fmt.Fprintf(ctx.Stdout, "%s:%s and %s:%s are identical\n",
+	if fileEntry1.Object == fileEntry2.Object {
+		fmt.Fprintf(ctx.Stderr, "%s:%s and %s:%s are identical\n",
 			fmt.Sprintf("%x", snap1.Header.GetIndexShortID()), path.Join(fileEntry1.ParentPath, fileEntry1.Stat().Name()),
 			fmt.Sprintf("%x", snap2.Header.GetIndexShortID()), path.Join(fileEntry2.ParentPath, fileEntry2.Stat().Name()))
 		return "", nil

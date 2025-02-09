@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"hash"
 	"io"
@@ -260,6 +261,29 @@ func (r *Repository) Checksum(data []byte) objects.Checksum {
 	return checksum
 }
 
+func (r *Repository) HasherHMAC() hash.Hash {
+	secret := r.AppContext().GetSecret()
+	if secret == nil {
+		return r.Hasher()
+	}
+	return hashing.GetHasherHMAC(r.Configuration().Hashing.Algorithm, secret)
+}
+
+func (r *Repository) ChecksumHMAC(data []byte) objects.Checksum {
+	hasher := r.HasherHMAC()
+	hasher.Write(data)
+	result := hasher.Sum(nil)
+
+	if len(result) != 32 {
+		panic("hasher returned invalid length")
+	}
+
+	var checksum objects.Checksum
+	copy(checksum[:], result)
+
+	return checksum
+}
+
 func (r *Repository) Chunker(rd io.ReadCloser) (*chunkers.Chunker, error) {
 	chunkingAlgorithm := r.configuration.Chunking.Algorithm
 	chunkingMinSize := r.configuration.Chunking.MinSize
@@ -304,22 +328,34 @@ func (r *Repository) DeleteSnapshot(snapshotID objects.Checksum) error {
 		r.Logger().Trace("repository", "DeleteSnapshot(%x): %s", snapshotID, time.Since(t0))
 	}()
 
-	/*	ret := r.state.DeleteSnapshot(snapshotID)
-			if ret != nil {
-				return ret
-			}
+	var identifier objects.Checksum
+	n, err := rand.Read(identifier[:])
+	if err != nil {
+		return err
+	}
+	if n != len(identifier) {
+		return io.ErrShortWrite
+	}
 
-			var buffer bytes.Buffer
-			err := r.state.SerializeStream(&buffer)
-			if err != nil {
-				return err
-			}
+	sc, err := r.AppContext().GetCache().Scan(identifier)
+	deltaState := r.state.Derive(sc)
 
-		checksum := r.Checksum(buffer.Bytes())
-		if err := r.PutState(checksum, &buffer); err != nil {
-			return err
-		}
-	*/
+	ret := deltaState.DeleteSnapshot(snapshotID)
+	if ret != nil {
+		return ret
+	}
+
+	buffer := &bytes.Buffer{}
+	err = deltaState.SerializeToStream(buffer)
+	if err != nil {
+		return err
+	}
+
+	checksum := r.Checksum(buffer.Bytes())
+	if err := r.PutState(checksum, buffer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -385,7 +421,7 @@ func (r *Repository) GetPackfile(checksum objects.Checksum) (io.Reader, error) {
 	return r.store.GetPackfile(checksum)
 }
 
-func (r *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint32, length uint32) (io.ReadSeeker, error) {
+func (r *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint64, length uint32) (io.ReadSeeker, error) {
 	t0 := time.Now()
 	defer func() {
 		r.Logger().Trace("repository", "GetPackfileBlob(%x, %d, %d): %s", checksum, offset, length, time.Since(t0))
@@ -430,9 +466,12 @@ func (r *Repository) DeletePackfile(checksum objects.Checksum) error {
 func (r *Repository) GetBlob(Type resources.Type, checksum objects.Checksum) (io.ReadSeeker, error) {
 	t0 := time.Now()
 	defer func() {
-		r.Logger().Trace("repository", "GetBlob(%x): %s", checksum, time.Since(t0))
+		r.Logger().Trace("repository", "GetBlob(%s, %x): %s", Type, checksum, time.Since(t0))
 	}()
 
+	if Type != resources.RT_SNAPSHOT {
+		checksum = r.ChecksumHMAC(checksum[:])
+	}
 	packfileChecksum, offset, length, exists := r.state.GetSubpartForBlob(Type, checksum)
 	if !exists {
 		return nil, ErrPackfileNotFound
@@ -449,9 +488,12 @@ func (r *Repository) GetBlob(Type resources.Type, checksum objects.Checksum) (io
 func (r *Repository) BlobExists(Type resources.Type, checksum objects.Checksum) bool {
 	t0 := time.Now()
 	defer func() {
-		r.Logger().Trace("repository", "BlobExists(%x): %s", checksum, time.Since(t0))
+		r.Logger().Trace("repository", "BlobExists(%s, %x): %s", Type, checksum, time.Since(t0))
 	}()
 
+	if Type != resources.RT_SNAPSHOT {
+		checksum = r.ChecksumHMAC(checksum[:])
+	}
 	return r.state.BlobExists(Type, checksum)
 }
 
@@ -461,15 +503,6 @@ func (r *Repository) ListSnapshots() iter.Seq[objects.Checksum] {
 		r.Logger().Trace("repository", "ListSnapshots(): %s", time.Since(t0))
 	}()
 	return r.state.ListSnapshots()
-}
-
-func (r *Repository) SetPackfileForBlob(Type resources.Type, packfileChecksum objects.Checksum, chunkChecksum objects.Checksum, offset uint32, length uint32) {
-	t0 := time.Now()
-	defer func() {
-		r.Logger().Trace("repository", "SetPackfileForBlob(%x, %x, %d, %d): %s", packfileChecksum, chunkChecksum, offset, length, time.Since(t0))
-	}()
-
-	r.state.SetPackfileForBlob(Type, packfileChecksum, chunkChecksum, offset, length)
 }
 
 func (r *Repository) Logger() *logging.Logger {

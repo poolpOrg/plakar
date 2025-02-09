@@ -18,6 +18,7 @@ package server
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
@@ -34,6 +35,12 @@ func parse_cmd_server(ctx *appcontext.AppContext, repo *repository.Repository, a
 	var opt_allowdelete bool
 
 	flags := flag.NewFlagSet("server", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
 	flags.StringVar(&opt_listen, "listen", "127.0.0.1:9876", "address to listen on")
 	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "disable delete operations")
 	flags.Parse(args)

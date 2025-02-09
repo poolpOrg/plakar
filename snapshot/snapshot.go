@@ -145,12 +145,12 @@ func Fork(repo *repository.Repository, Identifier objects.Checksum) (*Snapshot, 
 
 	snap.Header.Identifier = identifier
 
-	snap.Logger().Trace("snapshot", "%x: Fork(): %s", snap.Header.Identifier, snap.Header.GetIndexShortID())
+	snap.Logger().Trace("snapshot", "%x: Fork(): %x", snap.Header.Identifier, snap.Header.GetIndexShortID())
 	return snap, nil
 }
 
 func (snap *Snapshot) Close() error {
-	snap.Logger().Trace("snapshot", "%x: Close(): %s", snap.Header.Identifier, snap.Header.GetIndexShortID())
+	snap.Logger().Trace("snapshot", "%x: Close(): %x", snap.Header.Identifier, snap.Header.GetIndexShortID())
 
 	if snap.scanCache != nil {
 		return snap.scanCache.Close()
@@ -219,10 +219,10 @@ func (snap *Snapshot) ListChunks() (iter.Seq2[objects.Checksum, error], error) {
 				yield(objects.Checksum{}, err)
 				return
 			}
-			if fsentry.Object == nil {
+			if fsentry.ResolvedObject == nil {
 				continue
 			}
-			for _, chunk := range fsentry.Object.Chunks {
+			for _, chunk := range fsentry.ResolvedObject.Chunks {
 				if !yield(chunk.Checksum, nil) {
 					return
 				}
@@ -247,10 +247,10 @@ func (snap *Snapshot) ListObjects() (iter.Seq2[objects.Checksum, error], error) 
 				yield(objects.Checksum{}, err)
 				return
 			}
-			if fsentry.Object == nil {
+			if fsentry.ResolvedObject == nil {
 				continue
 			}
-			if !yield(fsentry.Object.Checksum, nil) {
+			if !yield(fsentry.Object, nil) {
 				return
 			}
 		}
