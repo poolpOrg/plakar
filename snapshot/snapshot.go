@@ -262,7 +262,6 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 	if err != nil {
 		return nil, err
 	}
-	_ = pvfs
 
 	return func(yield func(objects.Checksum, error) bool) {
 		packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_SNAPSHOT, snap.Header.Identifier)
@@ -287,7 +286,7 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 			}
 		}
 
-		packfile, exists = snap.repository.GetPackfileForBlob(resources.RT_VFS, snap.Header.Sources[0].VFS)
+		packfile, exists = snap.repository.GetPackfileForBlob(resources.RT_VFS_BTREE, snap.Header.Sources[0].VFS)
 		if !exists {
 			if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
 				return
@@ -297,53 +296,99 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 			return
 		}
 
-		// do that for all objects
-
-		pvfs.WalkDir("/", func(path string, entry *vfs.Entry, err error) error {
-			if err != nil {
-				if !yield(objects.Checksum{}, err) {
-					return err
-				}
-			}
-			serializeEntry, err := entry.ToBytes()
-			checksum := snap.repository.Checksum(serializeEntry)
-			packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_VFS_ENTRY, checksum)
+		/* Iterate over all the VFS, resolving both Nodes and actual VFS entries. */
+		fsIter := pvfs.IterNodes()
+		for fsIter.Next() {
+			macNode, node := fsIter.Current()
+			packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_VFS_BTREE, macNode)
 			if !exists {
 				if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
-					return err
+					return
 				}
 			}
 			if !yield(packfile, nil) {
-				return nil
+				return
 			}
 
-			if entry.Object != nil {
-				packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_OBJECT, entry.Object.Checksum)
+			for _, entry := range node.Values {
+				packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_VFS_ENTRY, entry)
 				if !exists {
 					if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
-						return err
+						return
 					}
 				}
 				if !yield(packfile, nil) {
-					return nil
+					return
 				}
 
-				for _, chunk := range entry.Object.Chunks {
-					packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_CHUNK, chunk.Checksum)
+				vfsEntry, err := pvfs.ResolveEntry(entry)
+				if err != nil {
+					if !yield(objects.Checksum{}, fmt.Errorf("Failed to resolve entry %x", entry)) {
+						return
+					}
+				}
+
+				if vfsEntry.HasObject() {
+					packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_OBJECT, vfsEntry.Object)
 					if !exists {
 						if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
-							return err
+							return
 						}
 					}
 					if !yield(packfile, nil) {
-						return nil
+						return
 					}
+
+					for _, chunk := range vfsEntry.ResolvedObject.Chunks {
+						packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_CHUNK, chunk.MAC)
+						if !exists {
+							if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+								return
+							}
+						}
+						if !yield(packfile, nil) {
+							return
+						}
+					}
+
 				}
 
 			}
 
-			return nil
-		})
+		}
+
+		/* Finally iterate over all errors */
+		errIter, err := snap.IterErrorNodes()
+		if err != nil {
+			if !yield(objects.Checksum{}, fmt.Errorf("Could not load errors btree: %s", err)) {
+				return
+			}
+		}
+
+		for errIter.Next() {
+			macNode, node := errIter.Current()
+			packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_ERROR_BTREE, macNode)
+			if !exists {
+				if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+					return
+				}
+			}
+			if !yield(packfile, nil) {
+				return
+			}
+
+			for _, error := range node.Values {
+				packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_ERROR_ENTRY, error)
+				if !exists {
+					if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+						return
+					}
+				}
+				if !yield(packfile, nil) {
+					return
+				}
+			}
+		}
 
 	}, nil
 }

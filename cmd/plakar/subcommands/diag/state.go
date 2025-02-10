@@ -100,7 +100,7 @@ func (cmd *InfoState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 			printBlobs("object", resources.RT_OBJECT)
 			printBlobs("file", resources.RT_VFS_BTREE)
 
-			for packfile := range st.ListPackfiles(byteArray) {
+			for packfile := range st.ListPackfilesForState(byteArray) {
 				fmt.Fprintf(ctx.Stdout, "Packfile: %x\n", packfile)
 
 			}

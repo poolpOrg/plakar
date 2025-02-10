@@ -93,8 +93,6 @@ func (cmd *Cleanup) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 			}
 
 			delete(packfiles, packfile)
-
-			// remove packfile from packfiles
 		}
 
 		snapshot.Close()
