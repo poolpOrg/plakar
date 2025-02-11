@@ -80,7 +80,7 @@ func (repo *Repository) Create(location string, config []byte) error {
 		return err
 	}
 
-	return WriteToFileAtomic(repo.location, repo.Path("CONFIG"), bytes.NewReader(config))
+	return WriteToFileAtomic(repo.Path(""), repo.Path("CONFIG"), bytes.NewReader(config))
 }
 
 func (repo *Repository) Open(location string) ([]byte, error) {
