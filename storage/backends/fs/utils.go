@@ -18,16 +18,16 @@ package fs
 
 import (
 	"bytes"
-	"path/filepath"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 )
-
 
 type ClosingFileReader struct {
 	reader io.Reader
-	file *os.File
+	file   *os.File
 }
 
 func (cr *ClosingFileReader) Read(p []byte) (int, error) {
@@ -42,11 +42,10 @@ func (cr *ClosingFileReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-
 func ClosingReader(file *os.File) (io.Reader, error) {
 	return &ClosingFileReader{
 		reader: file,
-		file: file,
+		file:   file,
 	}, nil
 }
 
@@ -77,13 +76,16 @@ func ClosingLimitedReaderFromOffset(file *os.File, offset, length int64) (io.Rea
 	}, nil
 }
 
-
-func WriteToFileAtomic(filename string, rd io.Reader) error {
-	return WriteToFileAtomicTempDir(filename, rd, filepath.Dir(filename))
+func WriteToFileAtomic(root, filename string, rd io.Reader) error {
+	return WriteToFileAtomicTempDir(root, filename, rd, filepath.Dir(filename))
 }
 
+func WriteToFileAtomicTempDir(root, filename string, rd io.Reader, tmpdir string) error {
+	absPath, err := filepath.Abs(filename)
+	if err != nil || !strings.HasPrefix(absPath, root) {
+		return fmt.Errorf("invalid file name")
+	}
 
-func WriteToFileAtomicTempDir(filename string, rd io.Reader, tmpdir string) error {
 	f, err := os.CreateTemp(tmpdir, "tmp.")
 	if err != nil {
 		return err

@@ -117,5 +117,5 @@ func (buckets *Buckets) Remove(checksum objects.Checksum) error {
 }
 
 func (buckets *Buckets) Put(checksum objects.Checksum, rd io.Reader) error {
-	return WriteToFileAtomicTempDir(buckets.Path(checksum), rd, buckets.path)
+	return WriteToFileAtomicTempDir(buckets.path, buckets.Path(checksum), rd, buckets.path)
 }
