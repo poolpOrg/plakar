@@ -257,16 +257,16 @@ func (snap *Snapshot) ListObjects() (iter.Seq2[objects.MAC, error], error) {
 	}, nil
 }
 
-func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error) {
+func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.MAC, error], error) {
 	pvfs, err := snap.Filesystem()
 	if err != nil {
 		return nil, err
 	}
 
-	return func(yield func(objects.Checksum, error) bool) {
+	return func(yield func(objects.MAC, error) bool) {
 		packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_SNAPSHOT, snap.Header.Identifier)
 		if !exists {
-			if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+			if !yield(objects.MAC{}, fmt.Errorf("snapshot packfile not found")) {
 				return
 			}
 		}
@@ -277,7 +277,7 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 		if snap.Header.Identity.Identifier != uuid.Nil {
 			packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_SIGNATURE, snap.Header.Identifier)
 			if !exists {
-				if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+				if !yield(objects.MAC{}, fmt.Errorf("snapshot packfile not found")) {
 					return
 				}
 			}
@@ -286,9 +286,9 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 			}
 		}
 
-		packfile, exists = snap.repository.GetPackfileForBlob(resources.RT_VFS_BTREE, snap.Header.Sources[0].VFS)
+		packfile, exists = snap.repository.GetPackfileForBlob(resources.RT_VFS_BTREE, snap.Header.Sources[0].VFS.Root)
 		if !exists {
-			if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+			if !yield(objects.MAC{}, fmt.Errorf("snapshot packfile not found")) {
 				return
 			}
 		}
@@ -302,7 +302,7 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 			macNode, node := fsIter.Current()
 			packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_VFS_BTREE, macNode)
 			if !exists {
-				if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+				if !yield(objects.MAC{}, fmt.Errorf("snapshot packfile not found")) {
 					return
 				}
 			}
@@ -313,7 +313,7 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 			for _, entry := range node.Values {
 				packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_VFS_ENTRY, entry)
 				if !exists {
-					if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+					if !yield(objects.MAC{}, fmt.Errorf("snapshot packfile not found")) {
 						return
 					}
 				}
@@ -323,7 +323,7 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 
 				vfsEntry, err := pvfs.ResolveEntry(entry)
 				if err != nil {
-					if !yield(objects.Checksum{}, fmt.Errorf("Failed to resolve entry %x", entry)) {
+					if !yield(objects.MAC{}, fmt.Errorf("Failed to resolve entry %x", entry)) {
 						return
 					}
 				}
@@ -331,7 +331,7 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 				if vfsEntry.HasObject() {
 					packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_OBJECT, vfsEntry.Object)
 					if !exists {
-						if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+						if !yield(objects.MAC{}, fmt.Errorf("snapshot packfile not found")) {
 							return
 						}
 					}
@@ -342,7 +342,7 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 					for _, chunk := range vfsEntry.ResolvedObject.Chunks {
 						packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_CHUNK, chunk.MAC)
 						if !exists {
-							if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+							if !yield(objects.MAC{}, fmt.Errorf("snapshot packfile not found")) {
 								return
 							}
 						}
@@ -358,9 +358,9 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 		}
 
 		/* Finally iterate over all errors */
-		errIter, err := snap.IterErrorNodes()
+		errIter, err := pvfs.IterErrorNodes()
 		if err != nil {
-			if !yield(objects.Checksum{}, fmt.Errorf("Could not load errors btree: %s", err)) {
+			if !yield(objects.MAC{}, fmt.Errorf("Could not load errors btree: %s", err)) {
 				return
 			}
 		}
@@ -369,7 +369,7 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 			macNode, node := errIter.Current()
 			packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_ERROR_BTREE, macNode)
 			if !exists {
-				if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+				if !yield(objects.MAC{}, fmt.Errorf("snapshot packfile not found")) {
 					return
 				}
 			}
@@ -380,7 +380,7 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.Checksum, error], error
 			for _, error := range node.Values {
 				packfile, exists := snap.repository.GetPackfileForBlob(resources.RT_ERROR_ENTRY, error)
 				if !exists {
-					if !yield(objects.Checksum{}, fmt.Errorf("snapshot packfile not found")) {
+					if !yield(objects.MAC{}, fmt.Errorf("snapshot packfile not found")) {
 						return
 					}
 				}
