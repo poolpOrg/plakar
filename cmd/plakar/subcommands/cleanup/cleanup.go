@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
@@ -57,19 +58,8 @@ func (cmd *Cleanup) Name() string {
 	return "cleanup"
 }
 
-func (cmd *Cleanup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	// the cleanup algorithm is a bit tricky and needs to be done in the correct sequence,
-	// here's what it has to do:
-	//
-	// 1. fetch all packfiles in the repository
-	// 2. iterate over snapshots
-	// 3. for each snapshot, resolve the packfiles it references
-	// 4. remove the packfiles from the list of packfiles
-	// 5. remaining packfiles should be marked as deleted in the state
-	// 6. remove the packfile in repository once it's flagged as deleted AND all snapshots have been `snapshot.Check`-ed
-	// 7. rebuild a new aggregate state with a new serial without the deleted packfiles
-
-	var packfiles map[objects.Checksum]struct{} = make(map[objects.Checksum]struct{})
+func colourPass(ctx *appcontext.AppContext, repo *repository.Repository) error {
+	var packfiles map[objects.MAC]struct{} = make(map[objects.MAC]struct{})
 	for checksum := range repo.ListPackfiles() {
 		packfiles[checksum] = struct{}{}
 	}
@@ -79,17 +69,17 @@ func (cmd *Cleanup) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 
 		snapshot, err := snapshot.Load(repo, snapshotID)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		iter, err := snapshot.ListPackfiles()
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		for packfile, err := range iter {
 			if err != nil {
-				return 1, err
+				return err
 			}
 
 			delete(packfiles, packfile)
@@ -99,18 +89,18 @@ func (cmd *Cleanup) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 
 	// This random id generation for non snapshot state should probably be encapsulated somewhere.
-	var identifier objects.Checksum
+	var identifier objects.MAC
 	n, err := rand.Read(identifier[:])
 	if err != nil {
-		return 1, err
+		return err
 	}
 	if n != len(identifier) {
-		return 1, io.ErrShortWrite
+		return io.ErrShortWrite
 	}
 
 	sc, err := repo.AppContext().GetCache().Scan(identifier)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	// First pass, coloring, we just flag those packfiles as being selected for deletion.
@@ -123,23 +113,101 @@ func (cmd *Cleanup) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	for packfile := range packfiles {
 		has, err := repo.HasDeletedPackfile(packfile)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		if !has {
 			fmt.Fprintf(ctx.Stdout, "cleanup: packfile: %x\n", packfile)
 			if err := deltaState.DeleteResource(resources.RT_PACKFILE, packfile); err != nil {
-				return 1, err
+				return err
 			}
 		}
 	}
 
 	buf := &bytes.Buffer{}
 	if err := deltaState.SerializeToStream(buf); err != nil {
-		return 1, err
+		return err
 	}
 
 	if err := repo.PutState(identifier, buf); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func sweepPass(ctx *appcontext.AppContext, repo *repository.Repository) error {
+	// These need to be configurable per repo, but we don't have a mechanism yet (comes in a PR soon!)
+	cutoff := time.Now().AddDate(0, 0, -3)
+	doDeletion := false
+
+	// 1. For each packfile, iterate over it and remove the entries in our aggregated state.
+	// 2. Actually remove the packfile (if option is enabled).
+	// 3. Remove deleted packfiles entries so that we don't reprocess them next run.
+	// 4. Serialize our aggregated state with a new Serial number and push it to repo.
+	toDelete := make([]objects.MAC, 0)
+	for packfileMAC, deletionTime := range repo.ListDeletedPackfiles() {
+		if deletionTime.After(cutoff) {
+			continue
+		}
+
+		packfile, err := repo.GetPackfile(packfileMAC)
+		if err != nil {
+			fmt.Fprintf(ctx.Stderr, "cleanup: Sweep pass failed to fetch packfile %x, skipping it\n", packfileMAC)
+			continue
+		}
+
+		for _, blob := range packfile.Index {
+			//XXX: Unless we have transactions this is going to be hard to handle errors.
+			if err := repo.RemoveBlob(blob.Type, blob.MAC); err != nil {
+				fmt.Fprintf(ctx.Stderr, "cleanup: Sweep pass failed to remove blob %x, type %s\n", blob.MAC, blob.Type)
+			}
+		}
+
+		if doDeletion {
+			toDelete = append(toDelete, packfileMAC)
+		}
+	}
+
+	//XXX: Same here.
+
+	//XXX: The solution might be to clone the full local leveldb state and switch to it once we know everything went well.
+	if err := repo.PutCurrentState(); err != nil {
+		return err
+	}
+
+	//XXX: We do this as the very last step since this is destructive.
+	// The only problem is that we have to have the list in memory but if you
+	// have enough packfiles to delete for this to be a concern we might have
+	// other issues anyway.
+	for _, packfileMAC := range toDelete {
+		if err := repo.DeletePackfile(packfileMAC); err != nil {
+			fmt.Fprintf(ctx.Stderr, "cleanup: Sweep pass failed to delete packfile %x, skipping it\n", packfileMAC)
+		}
+	}
+
+	return nil
+}
+
+func (cmd *Cleanup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	// the cleanup algorithm is a bit tricky and needs to be done in the correct sequence,
+	// here's what it has to do:
+	//
+	// 1. fetch all packfiles in the repository
+	// 2. iterate over snapshots
+	// 3. for each snapshot, resolve the packfiles it references
+	// 4. remove the packfiles from the list of packfiles
+	// 5. remaining packfiles should be marked as deleted in the state
+	// 6. remove the packfile in repository once it's flagged as deleted AND all snapshots have been `snapshot.Check`-ed
+	// 7. rebuild a new aggregate state with a new serial without the deleted packfiles
+
+	if err := colourPass(ctx, repo); err != nil {
+		fmt.Fprintf(ctx.Stderr, "cleanup: Colouring pass failed %s\n", err)
+		return 1, err
+	}
+
+	if err := sweepPass(ctx, repo); err != nil {
+		fmt.Fprintf(ctx.Stderr, "cleanup: Sweep pass failed %s\n", err)
 		return 1, err
 	}
 

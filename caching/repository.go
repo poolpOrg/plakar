@@ -178,6 +178,10 @@ func (c *_RepositoryCache) GetDeltas() iter.Seq2[objects.MAC, []byte] {
 	return c.getObjects("__delta__:")
 }
 
+func (c *_RepositoryCache) DelDelta(blobType resources.Type, blobCsum objects.MAC) error {
+	return c.delete("__delta__", fmt.Sprintf("%d:%x", blobType, blobCsum))
+}
+
 func (c *_RepositoryCache) PutDeleted(blobType resources.Type, blobCsum objects.MAC, data []byte) error {
 	return c.put("__deleted__", fmt.Sprintf("%d:%x", blobType, blobCsum), data)
 }
@@ -187,7 +191,10 @@ func (c *_RepositoryCache) HasDeleted(blobType resources.Type, blobCsum objects.
 }
 
 func (c *_RepositoryCache) GetDeleteds() iter.Seq2[objects.MAC, []byte] {
-	return c.getObjects("__deleted__:")
+	return c.getObjects(fmt.Sprintf("__deleted__:"))
+}
+func (c *_RepositoryCache) GetDeletedsByType(blobType resources.Type) iter.Seq2[objects.MAC, []byte] {
+	return c.getObjects(fmt.Sprintf("__deleted__:%d", blobType))
 }
 
 func (c *_RepositoryCache) PutPackfile(stateID, packfile objects.MAC, data []byte) error {

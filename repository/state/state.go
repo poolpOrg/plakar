@@ -541,6 +541,10 @@ func (ls *LocalState) PutDelta(de DeltaEntry) error {
 	return ls.cache.PutDelta(de.Type, de.Blob, de.ToBytes())
 }
 
+func (ls *LocalState) DelDelta(Type resources.Type, blobMAC objects.MAC) error {
+	return ls.cache.DelDelta(Type, blobMAC)
+}
+
 func (ls *LocalState) BlobExists(Type resources.Type, blobMAC objects.MAC) bool {
 	has, _ := ls.cache.HasDelta(Type, blobMAC)
 	return has
@@ -626,6 +630,18 @@ func (ls *LocalState) DeleteResource(rtype resources.Type, resource objects.MAC)
 
 func (ls *LocalState) HasDeletedResource(rtype resources.Type, resource objects.MAC) (bool, error) {
 	return ls.cache.HasDeleted(rtype, resource)
+}
+
+func (ls *LocalState) ListDeletedResources(rtype resources.Type) iter.Seq2[DeletedEntry, error] {
+	return func(yield func(DeletedEntry, error) bool) {
+		for _, buf := range ls.cache.GetDeletedsByType(rtype) {
+			de, err := DeletedEntryFromBytes(buf)
+
+			if !yield(de, err) {
+				return
+			}
+		}
+	}
 }
 
 func (mt *Metadata) ToBytes() ([]byte, error) {

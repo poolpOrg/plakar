@@ -28,6 +28,7 @@ import (
 	"github.com/PlakarKorp/plakar/storage"
 	"github.com/PlakarKorp/plakar/versioning"
 	sentry "github.com/getsentry/sentry-go"
+	"github.com/google/uuid"
 )
 
 var (
@@ -586,6 +587,26 @@ func (r *Repository) HasDeletedPackfile(mac objects.MAC) (bool, error) {
 	return r.state.HasDeletedResource(resources.RT_PACKFILE, mac)
 }
 
+func (r *Repository) ListDeletedPackfiles() iter.Seq2[objects.MAC, time.Time] {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "ListDeletedPackfiles(): %s", time.Since(t0))
+	}()
+
+	return func(yield func(objects.MAC, time.Time) bool) {
+		for snap, err := range r.state.ListDeletedResources(resources.RT_SNAPSHOT) {
+
+			if err != nil {
+				r.Logger().Error("Failed to fetch deleted snapshot %w", err)
+			}
+
+			if !yield(snap.Blob, snap.When) {
+				return
+			}
+		}
+	}
+}
+
 func (r *Repository) GetPackfileForBlob(Type resources.Type, mac objects.MAC) (packfile objects.MAC, exists bool) {
 	t0 := time.Now()
 	defer func() {
@@ -634,6 +655,14 @@ func (r *Repository) BlobExists(Type resources.Type, mac objects.MAC) bool {
 	return r.state.BlobExists(Type, mac)
 }
 
+func (r *Repository) RemoveBlob(Type resources.Type, mac objects.MAC) error {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "DeleteBlob(%s, %x): %s", Type, mac, time.Since(t0))
+	}()
+	return r.state.DelDelta(Type, mac)
+}
+
 func (r *Repository) ListSnapshots() iter.Seq[objects.MAC] {
 	t0 := time.Now()
 	defer func() {
@@ -648,6 +677,26 @@ func (r *Repository) ListPackfiles() iter.Seq[objects.MAC] {
 		r.Logger().Trace("repository", "ListPackfiles(): %s", time.Since(t0))
 	}()
 	return r.state.ListPackfiles()
+}
+
+// Saves the full aggregated state to the repository, might be heavy handed use
+// with care.
+func (r *Repository) PutCurrentState() error {
+	pr, pw := io.Pipe()
+
+	/* By using a pipe and a goroutine we bound the max size in memory. */
+	go func() {
+		defer pw.Close()
+		if err := r.state.SerializeToStream(pw); err != nil {
+			pw.CloseWithError(err)
+		}
+	}()
+
+	newSerial := uuid.New()
+	r.state.Metadata.Serial = newSerial
+	id := r.ComputeMAC(newSerial[:])
+
+	return r.PutState(id, pr)
 }
 
 func (r *Repository) Logger() *logging.Logger {
