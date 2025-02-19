@@ -10,15 +10,16 @@ type Configuration struct {
 	Agent AgentConfig `yaml:"agent"`
 }
 
-type Repository struct {
+type RepositoryConfig struct {
 	Name       string `yaml:"name"`
 	URL        string `yaml:"url"`
 	Passphrase string `yaml:"passphrase",omitempty`
 }
 
 type AgentConfig struct {
-	Alerting AlertingConfig `yaml:"alerting"`
-	TaskSets []TaskSet      `yaml:"tasks"`
+	Alerting AlertingConfig  `yaml:"alerting"`
+	Cleanup  []CleanupConfig `yaml:"cleanup"`
+	TaskSets []TaskSet       `yaml:"tasks"`
 }
 
 type AlertingConfig struct {
@@ -40,13 +41,13 @@ type SmtpConfig struct {
 }
 
 type TaskSet struct {
-	Name       string          `yaml:"name"`
-	Repository Repository      `yaml:"repository"`
-	Cleanup    *CleanupConfig  `yaml:"cleanup,omitempty"`
-	Backup     *BackupConfig   `yaml:"backup,omitempty"`
-	Check      []CheckConfig   `yaml:"check,omitempty"`
-	Restore    []RestoreConfig `yaml:"restore,omitempty"`
-	Sync       []SyncConfig    `yaml:"sync,omitempty"`
+	Name       string           `yaml:"name"`
+	Repository RepositoryConfig `yaml:"repository"`
+	Cleanup    *CleanupConfig   `yaml:"cleanup,omitempty"`
+	Backup     *BackupConfig    `yaml:"backup,omitempty"`
+	Check      []CheckConfig    `yaml:"check,omitempty"`
+	Restore    []RestoreConfig  `yaml:"restore,omitempty"`
+	Sync       []SyncConfig     `yaml:"sync,omitempty"`
 }
 
 type BackupConfig struct {
@@ -80,7 +81,9 @@ type SyncConfig struct {
 }
 
 type CleanupConfig struct {
-	Interval string `yaml:"interval"`
+	Interval   string           `yaml:"interval"`
+	Retention  string           `yaml:"retention"`
+	Repository RepositoryConfig `yaml:"repository"`
 }
 
 func NewConfiguration() *Configuration {

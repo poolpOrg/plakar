@@ -17,14 +17,14 @@ func startEventsProcessorStdio(ctx *appcontext.AppContext, quiet bool) eventsPro
 		for event := range ctx.Events().Listen() {
 			switch event := event.(type) {
 			case events.PathError:
-				ctx.GetLogger().Warn("%x: KO %s %s: %s", event.SnapshotID[:4], crossMark, event.Pathname, event.Message)
+				ctx.GetLogger().Stderr("%x: KO %s %s: %s", event.SnapshotID[:4], crossMark, event.Pathname, event.Message)
 			case events.DirectoryOK:
 				if !quiet {
-					ctx.GetLogger().Info("%x: OK %s %s", event.SnapshotID[:4], checkMark, event.Pathname)
+					ctx.GetLogger().Stdout("%x: OK %s %s", event.SnapshotID[:4], checkMark, event.Pathname)
 				}
 			case events.FileOK:
 				if !quiet {
-					ctx.GetLogger().Info("%x: OK %s %s", event.SnapshotID[:4], checkMark, event.Pathname)
+					ctx.GetLogger().Stdout("%x: OK %s %s", event.SnapshotID[:4], checkMark, event.Pathname)
 				}
 			case events.Done:
 				done <- struct{}{}

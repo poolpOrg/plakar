@@ -72,7 +72,7 @@ func generateSnapshot(t *testing.T, keyPair *keypair.KeyPair) *Snapshot {
 		ctx.Keypair = keyPair
 	}
 	logger := logging.NewLogger(os.Stdout, os.Stderr)
-	logger.EnableTrace("all")
+	//logger.EnableTrace("all")
 	ctx.SetLogger(logger)
 	repo, err := repository.New(ctx, r, serializedConfig)
 	require.NoError(t, err, "creating repository")

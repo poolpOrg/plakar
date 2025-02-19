@@ -94,6 +94,7 @@ func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, ar
 	var opt_stop bool
 	var opt_prometheus string
 	var opt_tasks string
+	var opt_logfile string
 
 	flags := flag.NewFlagSet("agent", flag.ExitOnError)
 	flags.Usage = func() {
@@ -105,6 +106,7 @@ func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, ar
 	flags.StringVar(&opt_tasks, "tasks", "", "tasks configuration file")
 	flags.StringVar(&opt_prometheus, "prometheus", "", "prometheus exporter interface, e.g. 127.0.0.1:9090")
 	flags.BoolVar(&opt_foreground, "foreground", false, "run in foreground")
+	flags.StringVar(&opt_logfile, "log", "", "log file")
 	flags.BoolVar(&opt_stop, "stop", false, "stop the agent")
 	flags.Parse(args)
 
@@ -134,6 +136,14 @@ func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, ar
 	if !opt_foreground && os.Getenv("REEXEC") == "" {
 		err := daemonize(os.Args)
 		return nil, err
+	}
+
+	if opt_logfile != "" {
+		f, err := os.OpenFile(opt_logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, err
+		}
+		ctx.GetLogger().SetOutput(f)
 	}
 
 	return &Agent{

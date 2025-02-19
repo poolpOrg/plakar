@@ -18,7 +18,6 @@ package backup
 
 import (
 	"bufio"
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"os"
@@ -175,7 +174,7 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		}
 		imp, err = importer.NewImporter("fs://" + scanDir)
 		if err != nil {
-			return 1, fmt.Errorf("failed to create an import for %s: %s", scanDir, err)
+			return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err)
 		}
 	}
 
@@ -193,11 +192,19 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	}
 
 	if cmd.OptCheck {
+
 		checkOptions := &snapshot.CheckOptions{
 			MaxConcurrency: cmd.Concurrency,
 			FastCheck:      false,
 		}
-		ok, err := snap.Check("/", checkOptions)
+
+		checkSnap, err := snapshot.Load(repo, snap.Header.Identifier)
+		if err != nil {
+			return 1, fmt.Errorf("failed to load snapshot: %w", err)
+		}
+		defer checkSnap.Close()
+
+		ok, err := checkSnap.Check("/", checkOptions)
 		if err != nil {
 			return 1, fmt.Errorf("failed to check snapshot: %w", err)
 		}
@@ -206,10 +213,10 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		}
 	}
 
-	ctx.GetLogger().Info("created %s snapshot %x with root %s of size %s in %s",
+	ctx.GetLogger().Info("%s: created %s snapshot %x of size %s in %s",
+		cmd.Name(),
 		"unsigned",
 		snap.Header.GetIndexShortID(),
-		base64.RawStdEncoding.EncodeToString(snap.Header.GetSource(0).VFS.Root[:]),
 		humanize.Bytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
 		snap.Header.Duration)
 	return 0, nil

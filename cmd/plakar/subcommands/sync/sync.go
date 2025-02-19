@@ -70,8 +70,8 @@ func parse_cmd_sync(ctx *appcontext.AppContext, repo *repository.Repository, arg
 		return nil, fmt.Errorf("usage: sync [SNAPSHOT] to|from REPOSITORY")
 	}
 
-	if direction != "to" && direction != "from" && direction != "both" {
-		return nil, fmt.Errorf("invalid direction, must be to, from or both")
+	if direction != "to" && direction != "from" && direction != "with" {
+		return nil, fmt.Errorf("invalid direction, must be to, from or with")
 	}
 
 	peerStore, peerStoreSerializedConfig, err := storage.Open(peerRepositoryPath)
@@ -144,16 +144,14 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 
 	peerStore, peerStoreSerializedConfig, err := storage.Open(cmd.PeerRepositoryLocation)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not open repository: %s\n", cmd.PeerRepositoryLocation, err)
-		return 1, err
+		return 1, fmt.Errorf("could not open peer store %s: %s", cmd.PeerRepositoryLocation, err)
 	}
 
 	peerCtx := appcontext.NewAppContextFrom(ctx)
 	peerCtx.SetSecret(cmd.PeerRepositorySecret)
 	peerRepository, err := repository.New(peerCtx, peerStore, peerStoreSerializedConfig)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not open repository: %s\n", peerStore.Location(), err)
-		return 1, err
+		return 1, fmt.Errorf("could not open peer repository %s: %s", cmd.PeerRepositoryLocation, err)
 	}
 
 	var srcRepository *repository.Repository
@@ -165,24 +163,21 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	} else if cmd.Direction == "from" {
 		srcRepository = peerRepository
 		dstRepository = repo
-	} else if cmd.Direction == "both" {
+	} else if cmd.Direction == "with" {
 		srcRepository = repo
 		dstRepository = peerRepository
 	} else {
-		fmt.Fprintf(os.Stderr, "%s: invalid direction, must be to, from or with\n", peerStore.Location())
-		return 1, err
+		return 1, fmt.Errorf("could not synchronize %s: invalid direction, must be to, from or with", peerStore.Location())
 	}
 
 	srcSnapshots, err := srcRepository.GetSnapshots()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not get snapshots from repository: %s\n", srcRepository.Location(), err)
-		return 1, err
+		return 1, fmt.Errorf("could not get list of snapshots from source repository %s: %s", srcRepository.Location(), err)
 	}
 
 	dstSnapshots, err := dstRepository.GetSnapshots()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not get snapshots list from repository: %s\n", dstRepository.Location(), err)
-		return 1, err
+		return 1, fmt.Errorf("could not get list of snapshots from peer repository %s: %s", dstRepository.Location(), err)
 	}
 
 	srcSnapshotsMap := make(map[objects.MAC]struct{})
@@ -202,8 +197,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	srcLocateOptions.Prefix = cmd.SnapshotPrefix
 	srcSnapshotIDs, err := utils.LocateSnapshotIDs(srcRepository, srcLocateOptions)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not locate snapshots in repository: %s\n", srcRepository.Location(), err)
-		return 1, err
+		return 1, fmt.Errorf("could not locate snapshots in source repository %s: %s", dstRepository.Location(), err)
 	}
 
 	for _, snapshotID := range srcSnapshotIDs {
@@ -212,20 +206,18 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		}
 	}
 
-	fmt.Printf("Synchronizing %d snapshots\n", len(srcSyncList))
-
 	for _, snapshotID := range srcSyncList {
 		err := synchronize(srcRepository, dstRepository, snapshotID)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s: could not synchronize snapshot %x from repository: %s\n", srcRepository.Location(), snapshotID, err)
+			ctx.GetLogger().Error("failed to synchronize snapshot %x from source repository %s: %s",
+				snapshotID[:4], srcRepository.Location(), err)
 		}
 	}
 
-	if cmd.Direction == "both" {
+	if cmd.Direction == "with" {
 		dstSnapshotIDs, err := utils.LocateSnapshotIDs(dstRepository, srcLocateOptions)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s: could not locate snapshots in repository: %s\n", srcRepository.Location(), err)
-			return 1, err
+			return 1, fmt.Errorf("could not locate snapshots in peer repository %s: %s", dstRepository.Location(), err)
 		}
 
 		dstSyncList := make([]objects.MAC, 0)
@@ -238,10 +230,29 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		for _, snapshotID := range dstSyncList {
 			err := synchronize(dstRepository, srcRepository, snapshotID)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s: could not synchronize snapshot %x from repository: %s\n", dstRepository.Location(), snapshotID, err)
+				ctx.GetLogger().Error("failed to synchronize snapshot %x from peer repository %s: %s",
+					snapshotID[:4], dstRepository.Location(), err)
 			}
 		}
+		ctx.GetLogger().Info("%s: synchronization between %s and %s completed: %d snapshots synchronized",
+			cmd.Name(),
+			srcRepository.Location(),
+			dstRepository.Location(),
+			len(srcSyncList)+len(dstSyncList))
+	} else if cmd.Direction == "to" {
+		ctx.GetLogger().Info("%s: synchronization from %s to %s completed: %d snapshots synchronized",
+			cmd.Name(),
+			srcRepository.Location(),
+			dstRepository.Location(),
+			len(srcSyncList))
+	} else {
+		ctx.GetLogger().Info("%s: synchronization from %s to %s completed: %d snapshots synchronized",
+			cmd.Name(),
+			dstRepository.Location(),
+			srcRepository.Location(),
+			len(srcSyncList))
 	}
+
 	return 0, nil
 }
 

@@ -30,14 +30,14 @@ func NewScheduler(ctx *appcontext.AppContext, config *Configuration) *Scheduler 
 }
 
 func (s *Scheduler) Run() {
-	for _, tasksetCfg := range s.config.Agent.TaskSets {
-		if tasksetCfg.Cleanup != nil {
-			err := s.cleanupTask(tasksetCfg, *tasksetCfg.Cleanup)
-			if err != nil {
-				s.ctx.GetLogger().Error("Error configuring maintenance task: %s", err)
-			}
+	for _, cleanupCfg := range s.config.Agent.Cleanup {
+		err := s.cleanupTask(cleanupCfg)
+		if err != nil {
+			s.ctx.GetLogger().Error("Error configuring cleanup task: %s", err)
 		}
+	}
 
+	for _, tasksetCfg := range s.config.Agent.TaskSets {
 		if tasksetCfg.Backup != nil {
 			err := s.backupTask(tasksetCfg, *tasksetCfg.Backup)
 			if err != nil {

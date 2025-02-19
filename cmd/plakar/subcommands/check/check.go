@@ -237,11 +237,19 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 			failures = true
 		}
 
+		if !failures {
+			ctx.GetLogger().Info("%s: verification of %x:%s completed successfully",
+				cmd.Name(),
+				snap.Header.GetIndexShortID(),
+				pathname)
+		}
+
 		snap.Close()
 	}
 
 	if failures {
 		return 1, fmt.Errorf("check failed")
 	}
+
 	return 0, nil
 }

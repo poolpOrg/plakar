@@ -174,6 +174,9 @@ func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 				ctx.GetLogger().Error("%s", err)
 				errors++
 			}
+			ctx.GetLogger().Info("%s: removal of %x completed successfully",
+				cmd.Name(),
+				snapshotID[:4])
 			wg.Done()
 		}(snap)
 	}
@@ -182,5 +185,6 @@ func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 	if errors != 0 {
 		return 1, fmt.Errorf("failed to remove %d snapshots", errors)
 	}
+
 	return 0, nil
 }

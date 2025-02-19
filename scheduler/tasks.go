@@ -83,8 +83,6 @@ func (s *Scheduler) backupTask(taskset TaskSet, task BackupConfig) error {
 				s.ctx.GetLogger().Error("Error creating backup: %s", err)
 				backupCtx.Close()
 				goto close
-			} else {
-				s.ctx.GetLogger().Info("Backup succeeded")
 			}
 			backupCtx.Close()
 
@@ -94,8 +92,6 @@ func (s *Scheduler) backupTask(taskset TaskSet, task BackupConfig) error {
 				retval, err = rmSubcommand.Execute(rmCtx, repo)
 				if err != nil || retval != 0 {
 					s.ctx.GetLogger().Error("Error removing obsolete backups: %s", err)
-				} else {
-					s.ctx.GetLogger().Info("Retention purge succeeded")
 				}
 				rmCtx.Close()
 			}
@@ -158,8 +154,6 @@ func (s *Scheduler) checkTask(taskset TaskSet, task CheckConfig) error {
 			retval, err := checkSubcommand.Execute(newCtx, repo)
 			if err != nil || retval != 0 {
 				s.ctx.GetLogger().Error("Error executing check: %s", err)
-			} else {
-				s.ctx.GetLogger().Info("Check succeeded")
 			}
 
 			newCtx.Close()
@@ -219,8 +213,6 @@ func (s *Scheduler) restoreTask(taskset TaskSet, task RestoreConfig) error {
 			retval, err := restoreSubcommand.Execute(newCtx, repo)
 			if err != nil || retval != 0 {
 				s.ctx.GetLogger().Error("Error executing restore: %s", err)
-			} else {
-				s.ctx.GetLogger().Info("Restore succeeded")
 			}
 
 			newCtx.Close()
@@ -276,7 +268,7 @@ func (s *Scheduler) syncTask(taskset TaskSet, task SyncConfig) error {
 
 			store, config, err := storage.Open(syncSubcommand.SourceRepositoryLocation)
 			if err != nil {
-				s.ctx.GetLogger().Error("Error opening storage: %s", err)
+				s.ctx.GetLogger().Error("sync: error opening storage: %s", err)
 				continue
 			}
 
@@ -284,16 +276,14 @@ func (s *Scheduler) syncTask(taskset TaskSet, task SyncConfig) error {
 
 			repo, err := repository.New(newCtx, store, config)
 			if err != nil {
-				s.ctx.GetLogger().Error("Error opening repository: %s", err)
+				s.ctx.GetLogger().Error("sync: error opening repository: %s", err)
 				store.Close()
 				continue
 			}
 
 			retval, err := syncSubcommand.Execute(newCtx, repo)
 			if err != nil || retval != 0 {
-				s.ctx.GetLogger().Error("Error executing sync: %s", err)
-			} else {
-				s.ctx.GetLogger().Info("Sync succeeded")
+				s.ctx.GetLogger().Error("sync: %s", err)
 			}
 
 			newCtx.Close()
@@ -305,17 +295,32 @@ func (s *Scheduler) syncTask(taskset TaskSet, task SyncConfig) error {
 	return nil
 }
 
-func (s *Scheduler) cleanupTask(taskset TaskSet, task CleanupConfig) error {
+func (s *Scheduler) cleanupTask(task CleanupConfig) error {
 	interval, err := stringToDuration(task.Interval)
 	if err != nil {
 		return err
 	}
 
 	cleanupSubcommand := &cleanup.Cleanup{}
-	cleanupSubcommand.RepositoryLocation = taskset.Repository.URL
-	if taskset.Repository.Passphrase != "" {
-		cleanupSubcommand.RepositorySecret = []byte(taskset.Repository.Passphrase)
+	cleanupSubcommand.RepositoryLocation = task.Repository.URL
+	if task.Repository.Passphrase != "" {
+		cleanupSubcommand.RepositorySecret = []byte(task.Repository.Passphrase)
 		_ = cleanupSubcommand.RepositorySecret
+	}
+
+	rmSubcommand := &rm.Rm{}
+	rmSubcommand.RepositoryLocation = task.Repository.URL
+	if task.Repository.Passphrase != "" {
+		rmSubcommand.RepositorySecret = []byte(task.Repository.Passphrase)
+		_ = rmSubcommand.RepositorySecret
+	}
+
+	var retention time.Duration
+	if task.Retention != "" {
+		retention, err = stringToDuration(task.Retention)
+		if err != nil {
+			return err
+		}
 	}
 
 	s.wg.Add(1)
@@ -348,7 +353,19 @@ func (s *Scheduler) cleanupTask(taskset TaskSet, task CleanupConfig) error {
 			if err != nil || retval != 0 {
 				s.ctx.GetLogger().Error("Error executing cleanup: %s", err)
 			} else {
-				s.ctx.GetLogger().Info("cleanup succeeded")
+				s.ctx.GetLogger().Info("maintenance of repository %s succeeded", cleanupSubcommand.RepositoryLocation)
+			}
+
+			if task.Retention != "" {
+				rmCtx := appcontext.NewAppContextFrom(newCtx)
+				rmSubcommand.OptBefore = time.Now().Add(-retention)
+				retval, err = rmSubcommand.Execute(rmCtx, repo)
+				if err != nil || retval != 0 {
+					s.ctx.GetLogger().Error("Error removing obsolete backups: %s", err)
+				} else {
+					s.ctx.GetLogger().Info("Retention purge succeeded")
+				}
+				rmCtx.Close()
 			}
 
 			newCtx.Close()
