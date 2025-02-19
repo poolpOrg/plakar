@@ -22,7 +22,6 @@ import (
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/restore"
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/rm"
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/server"
-	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/stdio"
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/sync"
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/ui"
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/version"

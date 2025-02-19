@@ -33,7 +33,7 @@ func NewLogger(stdout io.Writer, stderr io.Writer) *Logger {
 		warnLogger:      log.NewWithOptions(stderr, log.Options{ReportTimestamp: true, Level: log.WarnLevel, Prefix: "warn", TimeFormat: time.RFC3339}),
 		debugLogger:     log.NewWithOptions(stdout, log.Options{ReportTimestamp: true, Level: log.DebugLevel, Prefix: "debug", TimeFormat: time.RFC3339}),
 		traceLogger:     log.NewWithOptions(stdout, log.Options{ReportTimestamp: true, Level: log.DebugLevel, Prefix: "trace", TimeFormat: time.RFC3339}),
-		errorLogger:     log.NewWithOptions(stdout, log.Options{ReportTimestamp: true, Level: log.ErrorLevel, Prefix: "error", TimeFormat: time.RFC3339}),
+		errorLogger:     log.NewWithOptions(stderr, log.Options{ReportTimestamp: true, Level: log.ErrorLevel, Prefix: "error", TimeFormat: time.RFC3339}),
 		traceSubsystems: make(map[string]bool),
 	}
 }
