@@ -351,6 +351,6 @@ func (fsc *Filesystem) FileMacs() (iter.Seq2[objects.MAC, error], error) {
 }
 
 // XXX
-func (fsc *Filesystem) BTree() *btree.BTree[string, objects.MAC, objects.MAC] {
-	return fsc.tree
+func (fsc *Filesystem) BTrees() (*btree.BTree[string, objects.MAC, objects.MAC], *btree.BTree[string, objects.MAC, objects.MAC], *btree.BTree[string, objects.MAC, objects.MAC]) {
+	return fsc.tree, fsc.errors, fsc.xattrs
 }
