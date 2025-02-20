@@ -182,6 +182,36 @@ func (fsc *Filesystem) ResolveEntry(csum objects.MAC) (*Entry, error) {
 
 }
 
+func (fsc *Filesystem) ResolveXattr(mac objects.MAC) (*Xattr, error) {
+	rd, err := fsc.repo.GetBlob(resources.RT_XATTR_ENTRY, mac)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := io.ReadAll(rd)
+	if err != nil {
+		return nil, err
+	}
+
+	xattr, err := XattrFromBytes(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	rd, err = fsc.repo.GetBlob(resources.RT_OBJECT, xattr.Object)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err = io.ReadAll(rd)
+	if err != nil {
+		return nil, err
+	}
+
+	xattr.ResolvedObject, err = objects.NewObjectFromBytes(bytes)
+	return xattr, err
+}
+
 func (fsc *Filesystem) Open(path string) (fs.File, error) {
 	entry, err := fsc.lookup(path)
 	if err != nil {
