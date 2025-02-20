@@ -319,3 +319,8 @@ func (fsc *Filesystem) FileMacs() (iter.Seq2[objects.MAC, error], error) {
 		}
 	}, nil
 }
+
+// XXX
+func (fsc *Filesystem) BTree() *btree.BTree[string, objects.MAC, objects.MAC] {
+	return fsc.tree
+}

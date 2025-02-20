@@ -18,6 +18,7 @@ package sync
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -350,30 +351,73 @@ func recpush(src *snapshot.Snapshot, dst *snapshot.Snapshot, mac objects.MAC, rt
 	return dst.PutBlob(rtype, mac, data)
 }
 
-func syncVFS(src *snapshot.Snapshot, dst *snapshot.Snapshot, fs *vfs.Filesystem, root objects.MAC) error {
-	err := push(src, dst, root, resources.RT_VFS_BTREE, nil)
-	if err != nil {
-		return err
-	}
-
-	iter := fs.IterNodes()
-	for iter.Next() {
-		mac, node := iter.Current()
-
-		bytes, err := msgpack.Marshal(node)
+func syncVFS(src *snapshot.Snapshot, dst *snapshot.Snapshot, fs *vfs.Filesystem, root objects.MAC) (objects.MAC, error) {
+	return persistIndex(dst, fs.BTree(), resources.RT_VFS_BTREE, resources.RT_VFS_NODE, func(mac objects.MAC) (objects.MAC, error) {
+		entry, err := fs.ResolveEntry(mac)
 		if err != nil {
-			return err
+			return objects.MAC{}, err
 		}
 
-		// we could actually skip all the nodes below this one
-		// if it's present in the other side, but we're
-		// missing an API to do so.
-		if err := recpush(src, dst, mac, resources.RT_VFS_NODE, bytes); err != nil {
-			return err
-		}
-	}
+		if entry.HasObject() {
+			hasher := dst.Repository().GetMACHasher()
+			newObject := *entry.ResolvedObject
+			newObject.Chunks = make([]objects.Chunk, 0, len(entry.ResolvedObject.Chunks))
 
-	return nil
+			for _, chunkRef := range entry.ResolvedObject.Chunks {
+				chunk, err := src.GetBlob(resources.RT_CHUNK, chunkRef.MAC)
+				if err != nil {
+					return objects.MAC{}, err
+				}
+
+				hasher.Write(chunk)
+
+				chunkMAC := dst.Repository().ComputeMAC(chunk)
+				if !dst.BlobExists(resources.RT_CHUNK, chunkMAC) {
+					err = dst.PutBlob(resources.RT_CHUNK, chunkMAC, chunk)
+					if err != nil {
+						return objects.MAC{}, err
+					}
+				}
+
+				newObject.Chunks = append(newObject.Chunks, objects.Chunk{
+					Version: chunkRef.Version,
+					MAC:     chunkMAC,
+					Length:  chunkRef.Length,
+					Entropy: chunkRef.Entropy,
+					Flags:   chunkRef.Flags,
+				})
+			}
+
+			newObject.MAC = objects.MAC(hasher.Sum(nil))
+			serializedObject, err := newObject.Serialize()
+			if err != nil {
+				return objects.MAC{}, err
+			}
+
+			// XXX - replace with ComputeMAC of serializedObject
+			entry.Object = newObject.MAC
+			if !dst.BlobExists(resources.RT_OBJECT, entry.Object) {
+				err = dst.PutBlob(resources.RT_OBJECT, entry.Object, serializedObject)
+				if err != nil {
+					return objects.MAC{}, err
+				}
+			}
+		}
+
+		serializedEntry, err := entry.ToBytes()
+		if err != nil {
+			return objects.MAC{}, err
+		}
+
+		entryMAC := dst.Repository().ComputeMAC(serializedEntry)
+		if !dst.BlobExists(resources.RT_VFS_ENTRY, entryMAC) {
+			err = dst.PutBlob(resources.RT_VFS_ENTRY, entryMAC, serializedEntry)
+			if err != nil {
+				return objects.MAC{}, err
+			}
+		}
+		return entryMAC, nil
+	})
 }
 
 func syncErrors(src *snapshot.Snapshot, dst *snapshot.Snapshot, fs *vfs.Filesystem, root objects.MAC) error {
@@ -502,9 +546,13 @@ func synchronize(srcRepository *repository.Repository, dstRepository *repository
 	if err != nil {
 		return err
 	}
-	if err := syncVFS(srcSnapshot, dstSnapshot, fs, source.VFS.Root); err != nil {
+
+	if vfsRoot, err := syncVFS(srcSnapshot, dstSnapshot, fs, source.VFS.Root); err != nil {
 		return err
+	} else {
+		dstSnapshot.Header.GetSource(0).VFS.Root = vfsRoot
 	}
+
 	if err := syncErrors(srcSnapshot, dstSnapshot, fs, source.VFS.Errors); err != nil {
 		return err
 	}
@@ -519,4 +567,72 @@ func synchronize(srcRepository *repository.Repository, dstRepository *repository
 	}
 
 	return dstSnapshot.Commit()
+}
+
+type SnapshotStore[K any, V any] struct {
+	readonly bool
+	blobtype resources.Type
+	snap     *snapshot.Snapshot
+}
+
+func persistIndex[K, P, VA, VB any](snap *snapshot.Snapshot, tree *btree.BTree[K, P, VA], rootres, noderes resources.Type, conv func(VA) (VB, error)) (csum objects.MAC, err error) {
+	root, err := btree.Persist(tree, &SnapshotStore[K, VB]{
+		readonly: false,
+		blobtype: noderes,
+		snap:     snap,
+	}, conv)
+	if err != nil {
+		return
+	}
+
+	bytes, err := msgpack.Marshal(&btree.BTree[K, objects.MAC, VB]{
+		Order: tree.Order,
+		Root:  root,
+	})
+	if err != nil {
+		return
+	}
+
+	csum = snap.Repository().ComputeMAC(bytes)
+	if !snap.BlobExists(rootres, csum) {
+		err = snap.PutBlob(rootres, csum, bytes)
+	}
+	return
+}
+
+var (
+	ErrReadOnly = errors.New("read-only store")
+)
+
+func (s *SnapshotStore[K, V]) Get(sum objects.MAC) (*btree.Node[K, objects.MAC, V], error) {
+	bytes, err := s.snap.GetBlob(s.blobtype, sum)
+	if err != nil {
+		return nil, err
+	}
+	node := &btree.Node[K, objects.MAC, V]{}
+	err = msgpack.Unmarshal(bytes, node)
+	return node, err
+}
+
+func (s *SnapshotStore[K, V]) Update(sum objects.MAC, node *btree.Node[K, objects.MAC, V]) error {
+	return ErrReadOnly
+}
+
+func (s *SnapshotStore[K, V]) Put(node *btree.Node[K, objects.MAC, V]) (objects.MAC, error) {
+	if s.readonly {
+		return objects.MAC{}, ErrReadOnly
+	}
+
+	bytes, err := msgpack.Marshal(node)
+	if err != nil {
+		return objects.MAC{}, err
+	}
+
+	sum := s.snap.Repository().ComputeMAC(bytes)
+	if !s.snap.BlobExists(s.blobtype, sum) {
+		if err = s.snap.PutBlob(s.blobtype, sum, bytes); err != nil {
+			return objects.MAC{}, err
+		}
+	}
+	return sum, nil
 }
