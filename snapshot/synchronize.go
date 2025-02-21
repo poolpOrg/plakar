@@ -76,7 +76,7 @@ func persistObject(src, dst *Snapshot, object *objects.Object) (objects.MAC, err
 	return mac, nil
 }
 
-func persistVFS(src *Snapshot, dst *Snapshot, fs *vfs.Filesystem) func(objects.MAC) (objects.MAC, error) {
+func persistVFS(src *Snapshot, dst *Snapshot, fs *vfs.Filesystem, ctidx *btree.BTree[string, int, objects.MAC]) func(objects.MAC) (objects.MAC, error) {
 	return func(mac objects.MAC) (objects.MAC, error) {
 		entry, err := fs.ResolveEntry(mac)
 		if err != nil {
@@ -102,6 +102,16 @@ func persistVFS(src *Snapshot, dst *Snapshot, fs *vfs.Filesystem) func(objects.M
 				return objects.MAC{}, err
 			}
 		}
+
+		if entry.HasObject() {
+			parts := strings.SplitN(entry.ResolvedObject.ContentType, ";", 2)
+			mime := parts[0]
+			k := fmt.Sprintf("/%s%s", mime, entry.Path())
+			if err := ctidx.Insert(k, entryMAC); err != nil {
+				return objects.MAC{}, err
+			}
+		}
+
 		return entryMAC, nil
 	}
 }
@@ -194,7 +204,6 @@ func (src *Snapshot) Synchronize(dst *Snapshot) error {
 		}
 	}
 
-	source := src.Header.GetSource(0)
 	fs, err := src.Filesystem()
 	if err != nil {
 		return err
@@ -202,8 +211,10 @@ func (src *Snapshot) Synchronize(dst *Snapshot) error {
 
 	vfs, errors, xattrs := fs.BTrees()
 
+	ctidx, err := btree.New(&btree.InMemoryStore[string, objects.MAC]{}, strings.Compare, 50)
+
 	dst.Header.GetSource(0).VFS.Root, err = persistIndex(dst, vfs, resources.RT_VFS_BTREE,
-		resources.RT_VFS_NODE, persistVFS(src, dst, fs))
+		resources.RT_VFS_NODE, persistVFS(src, dst, fs, ctidx))
 	if err != nil {
 		return err
 	}
@@ -220,10 +231,15 @@ func (src *Snapshot) Synchronize(dst *Snapshot) error {
 		return err
 	}
 
-	for i := range source.Indexes {
-		if err := syncIndex(src, dst, &source.Indexes[i]); err != nil {
-			return err
-		}
+	ctsum, err := persistIndex(dst, ctidx, resources.RT_BTREE_ROOT, resources.RT_BTREE_NODE, func(mac objects.MAC) (objects.MAC, error) {
+		return mac, nil
+	})
+	dst.Header.GetSource(0).Indexes = []header.Index{
+		{
+			Name: "content-type",
+			Type: "btree",
+			Value: ctsum,
+		},
 	}
 
 	return nil
