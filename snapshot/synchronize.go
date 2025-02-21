@@ -84,6 +84,10 @@ func persistVFS(src *Snapshot, dst *Snapshot, fs *vfs.Filesystem) func(objects.M
 		}
 
 		if entry.HasObject() {
+			entry.Object, err = persistObject(src, dst, entry.ResolvedObject)
+			if err != nil {
+				return objects.MAC{}, nil
+			}
 		}
 
 		serializedEntry, err := entry.ToBytes()
