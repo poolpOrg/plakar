@@ -1,18 +1,15 @@
 package snapshot
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
 	"github.com/PlakarKorp/plakar/btree"
 	"github.com/PlakarKorp/plakar/objects"
-	"github.com/PlakarKorp/plakar/repository"
 	"github.com/PlakarKorp/plakar/resources"
 	"github.com/PlakarKorp/plakar/snapshot/header"
 	"github.com/PlakarKorp/plakar/snapshot/vfs"
 	"github.com/google/uuid"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 func push(src *Snapshot, dst *Snapshot, mac objects.MAC, rtype resources.Type, data []byte) error {
@@ -153,46 +150,6 @@ func persistXattrs(src *Snapshot, dst *Snapshot, fs *vfs.Filesystem) func(object
 		}
 		return newmac, nil
 	}
-}
-
-func syncIndex(src *Snapshot, dst *Snapshot, index *header.Index) error {
-	switch index.Name {
-	case "content-type":
-		serialized, err := src.GetBlob(resources.RT_BTREE_ROOT, index.Value)
-		if err != nil {
-			return err
-		}
-		if err := dst.PutBlob(resources.RT_BTREE_ROOT, index.Value, serialized); err != nil {
-			return err
-		}
-
-		store := repository.NewRepositoryStore[string, objects.MAC](src.Repository(), resources.RT_BTREE_NODE)
-		tree, err := btree.Deserialize(bytes.NewReader(serialized), store, strings.Compare)
-		if err != nil {
-			return err
-		}
-
-		it := tree.IterDFS()
-		for it.Next() {
-			mac, node := it.Current()
-
-			bytes, err := msgpack.Marshal(node)
-			if err != nil {
-				return err
-			}
-
-			err = push(src, dst, mac, resources.RT_BTREE_NODE, bytes)
-			if err != nil {
-				return err
-			}
-		}
-
-	default:
-		return fmt.Errorf("don't know how to sync the index %s of type %s",
-			index.Name, index.Type)
-	}
-
-	return nil
 }
 
 func (src *Snapshot) Synchronize(dst *Snapshot) error {
