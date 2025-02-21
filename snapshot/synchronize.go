@@ -12,20 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-func push(src *Snapshot, dst *Snapshot, mac objects.MAC, rtype resources.Type, data []byte) error {
-	if dst.BlobExists(rtype, mac) {
-		return nil
-	}
-	var err error
-	if data == nil {
-		data, err = src.GetBlob(rtype, mac)
-		if err != nil {
-			return err
-		}
-	}
-	return dst.PutBlob(rtype, mac, data)
-}
-
 func persistObject(src, dst *Snapshot, object *objects.Object) (objects.MAC, error) {
 	hasher := dst.Repository().GetMACHasher()
 	newObject := *object
@@ -154,10 +140,18 @@ func persistXattrs(src *Snapshot, dst *Snapshot, fs *vfs.Filesystem) func(object
 
 func (src *Snapshot) Synchronize(dst *Snapshot) error {
 	if src.Header.Identity.Identifier != uuid.Nil {
-		err := push(src, dst, src.Header.Identifier,
-			resources.RT_SIGNATURE, nil)
+		data, err := src.GetBlob(resources.RT_SIGNATURE, src.Header.Identifier)
 		if err != nil {
 			return err
+		}
+
+		newmac := dst.Repository().ComputeMAC(data)
+		dst.Header.Identifier = newmac
+		if dst.BlobExists(resources.RT_SIGNATURE, newmac) {
+			err = dst.PutBlob(resources.RT_SIGNATURE, newmac, data)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
