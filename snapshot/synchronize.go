@@ -3,7 +3,6 @@ package snapshot
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/PlakarKorp/plakar/btree"
@@ -285,15 +284,11 @@ func (src *Snapshot) Synchronize(dst *Snapshot) error {
 		return err
 	}
 
-	log.Println("here")
-
 	dst.Header.GetSource(0).VFS.Errors, err = persistIndex(dst, errors, resources.RT_ERROR_BTREE,
 		resources.RT_ERROR_NODE, persistErrors(src, dst))
 	if err != nil {
 		return err
 	}
-
-	log.Println("here 2")
 
 	dst.Header.GetSource(0).VFS.Xattrs, err = persistIndex(dst, xattrs, resources.RT_XATTR_BTREE,
 		resources.RT_XATTR_NODE, persistXattrs(src, dst, fs))
@@ -301,15 +296,11 @@ func (src *Snapshot) Synchronize(dst *Snapshot) error {
 		return err
 	}
 
-	log.Println("here 3")
-
 	for i := range source.Indexes {
 		if err := syncIndex(src, dst, &source.Indexes[i]); err != nil {
 			return err
 		}
 	}
-
-	log.Println("here 4")
 
 	return nil
 }
