@@ -70,8 +70,8 @@ func parse_cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, a
 
 	flags.Uint64Var(&opt_concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
 	flags.StringVar(&opt_tags, "tag", "", "tag to assign to this snapshot")
-	flags.StringVar(&opt_excludes, "excludes", "", "file containing a list of exclusions")
-	flags.Var(&opt_exclude, "exclude", "file containing a list of exclusions")
+	flags.StringVar(&opt_excludes, "excludes", "", "path to a file containing newline-separated regex patterns, treated as -exclude")
+	flags.Var(&opt_exclude, "exclude", "regex pattern to exclude files, can be specified multiple times to add several exclusion patterns")
 	flags.BoolVar(&opt_quiet, "quiet", false, "suppress output")
 	flags.BoolVar(&opt_silent, "silent", false, "suppress ALL output")
 	flags.BoolVar(&opt_check, "check", false, "check the snapshot after creating it")
@@ -110,7 +110,6 @@ func parse_cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, a
 		Concurrency:        opt_concurrency,
 		Tags:               opt_tags,
 		Excludes:           excludes,
-		Exclude:            opt_exclude,
 		Quiet:              opt_quiet,
 		Path:               flags.Arg(0),
 		OptCheck:           opt_check,
@@ -125,7 +124,6 @@ type Backup struct {
 	Concurrency uint64
 	Tags        string
 	Excludes    []glob.Glob
-	Exclude     []string
 	Silent      bool
 	Quiet       bool
 	Path        string
