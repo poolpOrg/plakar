@@ -202,7 +202,6 @@ func TestExecuteCmdRestoreSpecificSnapshot(t *testing.T) {
 	// 2025-02-25T21:35:42Z info: restore: restoration of 31b0d219:/ at /tmp/tmp_to_restore3971085618/plakar-2025-02-25T21:35:42Z completed successfully
 
 	output := bufOut.String()
-	fmt.Println("output", output)
 	lines := strings.Split(strings.Trim(output, "\n"), "\n")
 	require.Equal(t, 8, len(lines))
 	// last line should have the summary
