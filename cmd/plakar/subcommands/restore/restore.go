@@ -19,6 +19,7 @@ package restore
 import (
 	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -178,9 +179,24 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		return 1, fmt.Errorf("multiple snapshots found, please specify one")
 	}
 
+	exporterConfig := map[string]string{
+		"location": cmd.Target,
+	}
+	if strings.HasPrefix(cmd.Target, "@") {
+		remote, ok := ctx.Config.GetRepository(cmd.Target[1:])
+		if !ok {
+			return 1, fmt.Errorf("could not resolve exporter: %s", cmd.Target)
+		}
+		if _, ok := remote["location"]; !ok {
+			return 1, fmt.Errorf("could not resolve exporter location: %s", cmd.Target)
+		} else {
+			exporterConfig = remote
+		}
+	}
+
 	var exporterInstance exporter.Exporter
 	var err error
-	exporterInstance, err = exporter.NewExporter(cmd.Target)
+	exporterInstance, err = exporter.NewExporter(exporterConfig)
 	if err != nil {
 		return 1, err
 	}
