@@ -143,7 +143,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 			return 1, fmt.Errorf("ls: could not fetch snapshots list: %w", err)
 		}
 		for _, snapshotID := range snapshotIDs {
-			snapshots = append(snapshots, fmt.Sprintf("%x:/", snapshotID))
+			snapshots = append(snapshots, fmt.Sprintf("%x:", snapshotID))
 		}
 	} else {
 		for _, snapshotPath := range cmd.Snapshots {

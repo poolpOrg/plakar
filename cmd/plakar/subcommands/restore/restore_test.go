@@ -147,13 +147,11 @@ func TestExecuteCmdRestoreDefault(t *testing.T) {
 	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/subdir/to_exclude
 	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/subdir
 	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /
 	// 2025-02-25T21:35:42Z info: restore: restoration of 31b0d219:/ at /tmp/tmp_to_restore3971085618/plakar-2025-02-25T21:35:42Z completed successfully
 
 	output := bufOut.String()
 	lines := strings.Split(strings.Trim(output, "\n"), "\n")
-	require.Equal(t, 10, len(lines))
+	require.Equal(t, 8, len(lines))
 	// last line should have the summary
 	lastline := lines[len(lines)-1]
 	require.Contains(t, lastline, "info: restore: restoration of")
