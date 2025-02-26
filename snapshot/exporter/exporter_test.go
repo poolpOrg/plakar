@@ -32,10 +32,10 @@ func (m MockedExporter) Close() error {
 
 func TestBackends(t *testing.T) {
 	// Setup: Register some backends
-	Register("fs1", func(location string) (Exporter, error) {
+	Register("fs1", func(config map[string]string) (Exporter, error) {
 		return nil, nil
 	})
-	Register("s33", func(location string) (Exporter, error) {
+	Register("s33", func(config map[string]string) (Exporter, error) {
 		return nil, nil
 	})
 
@@ -49,10 +49,10 @@ func TestBackends(t *testing.T) {
 
 func TestNewExporter(t *testing.T) {
 	// Setup: Register some backends
-	Register("fs", func(location string) (Exporter, error) {
+	Register("fs", func(config map[string]string) (Exporter, error) {
 		return MockedExporter{}, nil
 	})
-	Register("s3", func(location string) (Exporter, error) {
+	Register("s3", func(config map[string]string) (Exporter, error) {
 		return MockedExporter{}, nil
 	})
 
@@ -69,7 +69,7 @@ func TestNewExporter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.location, func(t *testing.T) {
-			exporter, err := NewExporter(test.location)
+			exporter, err := NewExporter(map[string]string{"location": test.location})
 
 			if test.expectedError != "" {
 				require.Error(t, err)

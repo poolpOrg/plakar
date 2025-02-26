@@ -20,9 +20,9 @@ type Exporter interface {
 }
 
 var muBackends sync.Mutex
-var backends map[string]func(location string) (Exporter, error) = make(map[string]func(location string) (Exporter, error))
+var backends map[string]func(config map[string]string) (Exporter, error) = make(map[string]func(config map[string]string) (Exporter, error))
 
-func Register(name string, backend func(location string) (Exporter, error)) {
+func Register(name string, backend func(config map[string]string) (Exporter, error)) {
 	muBackends.Lock()
 	defer muBackends.Unlock()
 
@@ -46,7 +46,13 @@ func Backends() []string {
 	return ret
 }
 
-func NewExporter(location string) (Exporter, error) {
+func NewExporter(config map[string]string) (Exporter, error) {
+
+	location, ok := config["location"]
+	if !ok {
+		return nil, fmt.Errorf("missing location")
+	}
+
 	muBackends.Lock()
 	defer muBackends.Unlock()
 
@@ -70,7 +76,7 @@ func NewExporter(location string) (Exporter, error) {
 	if backend, exists := backends[backendName]; !exists {
 		return nil, fmt.Errorf("backend '%s' does not exist", backendName)
 	} else {
-		backendInstance, err := backend(location)
+		backendInstance, err := backend(config)
 		if err != nil {
 			return nil, err
 		}

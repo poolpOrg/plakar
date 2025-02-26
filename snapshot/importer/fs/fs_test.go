@@ -18,7 +18,7 @@ func TestFSImporter(t *testing.T) {
 	err = os.WriteFile(tmpImportDir+"/dummy.txt", []byte("test importer fs"), 0644)
 	require.NoError(t, err)
 
-	importer, err := NewFSImporter(tmpImportDir)
+	importer, err := NewFSImporter(map[string]string{"location": tmpImportDir})
 	require.NoError(t, err)
 	require.NotNil(t, importer)
 

@@ -167,24 +167,40 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		scanDir = cmd.Path
 	}
 
-	imp, err := importer.NewImporter(scanDir)
+	importerConfig := map[string]string{
+		"location": scanDir,
+	}
+	if strings.HasPrefix(scanDir, "@") {
+		remote, ok := ctx.Config.GetRemote(scanDir[1:])
+		if !ok {
+			return 1, fmt.Errorf("could not resolve importer: %s", scanDir)
+		}
+		if _, ok := remote["location"]; !ok {
+			return 1, fmt.Errorf("could not resolve importer location: %s", scanDir)
+		} else {
+			importerConfig = remote
+		}
+	}
+
+	imp, err := importer.NewImporter(importerConfig)
 	if err != nil {
 		if !filepath.IsAbs(scanDir) {
 			scanDir = filepath.Join(ctx.CWD, scanDir)
 		}
-		imp, err = importer.NewImporter("fs://" + scanDir)
+		imp, err = importer.NewImporter(map[string]string{"location": "fs://" + scanDir})
 		if err != nil {
 			return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err)
 		}
 	}
+	defer imp.Close()
 
 	if cmd.Silent {
-		if err := snap.Backup(scanDir, imp, opts); err != nil {
+		if err := snap.Backup(imp, opts); err != nil {
 			return 1, fmt.Errorf("failed to create snapshot: %w", err)
 		}
 	} else {
 		ep := startEventsProcessor(ctx, imp.Root(), true, cmd.Quiet)
-		if err := snap.Backup(scanDir, imp, opts); err != nil {
+		if err := snap.Backup(imp, opts); err != nil {
 			ep.Close()
 			return 1, fmt.Errorf("failed to create snapshot: %w", err)
 		}

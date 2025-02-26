@@ -224,9 +224,9 @@ func TestHttpBackend(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	// create a repository
-	repo := NewRepository(ts.URL)
-	if repo == nil {
-		t.Fatal("error creating repository")
+	repo, err := NewRepository(map[string]string{"location": ts.URL})
+	if err != nil {
+		t.Fatal("error creating repository", err)
 	}
 
 	location := repo.Location()
@@ -236,10 +236,10 @@ func TestHttpBackend(t *testing.T) {
 	serializedConfig, err := config.ToBytes()
 	require.NoError(t, err)
 
-	err = repo.Create(ts.URL, serializedConfig)
+	err = repo.Create(serializedConfig)
 	require.NoError(t, err)
 
-	_, err = repo.Open(ts.URL)
+	_, err = repo.Open()
 	require.NoError(t, err)
 	//require.Equal(t, repo.Configuration().Version, versioning.FromString(storage.VERSION))
 

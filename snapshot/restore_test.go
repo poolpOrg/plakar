@@ -24,7 +24,7 @@ func TestRestore(t *testing.T) {
 		os.RemoveAll(tmpRestoreDir)
 	})
 	var exporterInstance exporter.Exporter
-	exporterInstance, err = exporter.NewExporter(tmpRestoreDir)
+	exporterInstance, err = exporter.NewExporter(map[string]string{"location": tmpRestoreDir})
 	require.NoError(t, err)
 	defer exporterInstance.Close()
 

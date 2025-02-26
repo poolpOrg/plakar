@@ -40,10 +40,10 @@ func init() {
 	storage.Register("fs", NewRepository)
 }
 
-func NewRepository(location string) storage.Store {
+func NewRepository(storeConfig map[string]string) (storage.Store, error) {
 	return &Repository{
-		location: location,
-	}
+		location: storeConfig["location"],
+	}, nil
 }
 
 func (repo *Repository) Location() string {
@@ -63,7 +63,7 @@ func (repo *Repository) Path(args ...string) string {
 	return filepath.Join(args...)
 }
 
-func (repo *Repository) Create(location string, config []byte) error {
+func (repo *Repository) Create(config []byte) error {
 
 	err := os.Mkdir(repo.Path(), 0700)
 	if err != nil {
@@ -83,7 +83,7 @@ func (repo *Repository) Create(location string, config []byte) error {
 	return WriteToFileAtomic(repo.Path("CONFIG"), bytes.NewReader(config))
 }
 
-func (repo *Repository) Open(location string) ([]byte, error) {
+func (repo *Repository) Open() ([]byte, error) {
 
 	repo.packfiles = NewBuckets(repo.Path("packfiles"))
 	repo.states = NewBuckets(repo.Path("states"))

@@ -18,6 +18,7 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/url"
 	"strings"
@@ -31,16 +32,17 @@ import (
 type S3Exporter struct {
 	minioClient *minio.Client
 	rootDir     string
+
+	accessKeyID     string
+	secretAccessKey string
 }
 
 func init() {
 	exporter.Register("s3", NewS3Exporter)
 }
 
-func connect(location *url.URL) (*minio.Client, error) {
+func connect(location *url.URL, accessKeyID, secretAccessKey string) (*minio.Client, error) {
 	endpoint := location.Host
-	accessKeyID := location.User.Username()
-	secretAccessKey, _ := location.User.Password()
 	useSSL := false
 
 	// Initialize minio client object.
@@ -50,13 +52,28 @@ func connect(location *url.URL) (*minio.Client, error) {
 	})
 }
 
-func NewS3Exporter(location string) (exporter.Exporter, error) {
+func NewS3Exporter(config map[string]string) (exporter.Exporter, error) {
+	location := config["location"]
+	var accessKey string
+	if tmp, ok := config["access_key"]; !ok {
+		return nil, fmt.Errorf("missing access_key")
+	} else {
+		accessKey = tmp
+	}
+
+	var secretAccessKey string
+	if tmp, ok := config["secret_access_key"]; !ok {
+		return nil, fmt.Errorf("missing secret_access_key")
+	} else {
+		secretAccessKey = tmp
+	}
+
 	parsed, err := url.Parse(location)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := connect(parsed)
+	conn, err := connect(parsed, accessKey, secretAccessKey)
 	if err != nil {
 		return nil, err
 	}

@@ -28,7 +28,7 @@ func TestExporter(t *testing.T) {
 	tmpExportBucket := "s3://" + ts.Listener.Addr().String() + "/bucket"
 
 	var exporterInstance exporter.Exporter
-	exporterInstance, err = exporter.NewExporter(tmpExportBucket)
+	exporterInstance, err = exporter.NewExporter(map[string]string{"location": tmpExportBucket})
 	require.NoError(t, err)
 	defer exporterInstance.Close()
 

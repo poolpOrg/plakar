@@ -21,7 +21,7 @@ func TestExporter(t *testing.T) {
 	})
 
 	var exporterInstance exporter.Exporter
-	exporterInstance, err = exporter.NewExporter(tmpExportDir)
+	exporterInstance, err = exporter.NewExporter(map[string]string{"location": tmpExportDir})
 	require.NoError(t, err)
 	defer exporterInstance.Close()
 

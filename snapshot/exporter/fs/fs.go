@@ -33,7 +33,9 @@ func init() {
 	exporter.Register("fs", NewFSExporter)
 }
 
-func NewFSExporter(location string) (exporter.Exporter, error) {
+func NewFSExporter(config map[string]string) (exporter.Exporter, error) {
+	location := config["location"]
+
 	if strings.HasPrefix(location, "fs://") {
 		location = location[4:]
 	}
