@@ -620,6 +620,26 @@ func (r *Repository) ListDeletedPackfiles() iter.Seq2[objects.MAC, time.Time] {
 		for snap, err := range r.state.ListDeletedResources(resources.RT_PACKFILE) {
 
 			if err != nil {
+				r.Logger().Error("Failed to fetch deleted packfile %s", err)
+			}
+
+			if !yield(snap.Blob, snap.When) {
+				return
+			}
+		}
+	}
+}
+
+func (r *Repository) ListDeletedSnapShots() iter.Seq2[objects.MAC, time.Time] {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "ListDeletedSnapShots(): %s", time.Since(t0))
+	}()
+
+	return func(yield func(objects.MAC, time.Time) bool) {
+		for snap, err := range r.state.ListDeletedResources(resources.RT_SNAPSHOT) {
+
+			if err != nil {
 				r.Logger().Error("Failed to fetch deleted snapshot %s", err)
 			}
 

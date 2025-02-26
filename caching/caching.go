@@ -19,14 +19,18 @@ type Manager struct {
 
 	vfsCache      map[string]*_VFSCache
 	vfsCacheMutex sync.Mutex
+
+	maintainanceCache      map[uuid.UUID]*MaintainanceCache
+	maintainanceCacheMutex sync.Mutex
 }
 
 func NewManager(cacheDir string) *Manager {
 	return &Manager{
 		cacheDir: filepath.Join(cacheDir, CACHE_VERSION),
 
-		repositoryCache: make(map[uuid.UUID]*_RepositoryCache),
-		vfsCache:        make(map[string]*_VFSCache),
+		repositoryCache:   make(map[uuid.UUID]*_RepositoryCache),
+		vfsCache:          make(map[string]*_VFSCache),
+		maintainanceCache: make(map[uuid.UUID]*MaintainanceCache),
 	}
 }
 
@@ -77,6 +81,22 @@ func (m *Manager) Repository(repositoryID uuid.UUID) (*_RepositoryCache, error) 
 		return nil, err
 	} else {
 		m.repositoryCache[repositoryID] = cache
+		return cache, nil
+	}
+}
+
+func (m *Manager) Maintainance(repositoryID uuid.UUID) (*MaintainanceCache, error) {
+	m.maintainanceCacheMutex.Lock()
+	defer m.maintainanceCacheMutex.Unlock()
+
+	if cache, ok := m.maintainanceCache[repositoryID]; ok {
+		return cache, nil
+	}
+
+	if cache, err := newMaintainanceCache(m, repositoryID); err != nil {
+		return nil, err
+	} else {
+		m.maintainanceCache[repositoryID] = cache
 		return cache, nil
 	}
 }
