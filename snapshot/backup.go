@@ -87,6 +87,10 @@ func (snapshot *Snapshot) skipExcludedPathname(options *BackupOptions, record *i
 		pathname = record.Error.Pathname
 	}
 
+	if pathname == "/" {
+		return false
+	}
+
 	doExclude := false
 	for _, exclude := range options.Excludes {
 		if exclude.Match(pathname) {
