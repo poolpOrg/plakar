@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
@@ -134,7 +135,20 @@ func (cmd *Sync) Name() string {
 
 func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 
-	peerStore, peerStoreSerializedConfig, err := storage.Open(map[string]string{"location": cmd.PeerRepositoryLocation})
+	storeConfig := map[string]string{"location": cmd.PeerRepositoryLocation}
+	if strings.HasPrefix(cmd.PeerRepositoryLocation, "@") {
+		remote, ok := ctx.Config.GetRepository(cmd.PeerRepositoryLocation[1:])
+		if !ok {
+			return 1, fmt.Errorf("could not resolve repository: %s", cmd.PeerRepositoryLocation)
+		}
+		if _, ok := remote["location"]; !ok {
+			return 1, fmt.Errorf("could not resolve repositor location: %s", cmd.PeerRepositoryLocation)
+		} else {
+			storeConfig = remote
+		}
+	}
+
+	peerStore, peerStoreSerializedConfig, err := storage.Open(storeConfig)
 	if err != nil {
 		return 1, fmt.Errorf("could not open peer store %s: %s", cmd.PeerRepositoryLocation, err)
 	}
