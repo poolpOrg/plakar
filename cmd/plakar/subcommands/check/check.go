@@ -175,7 +175,7 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 			return 1, err
 		}
 		for _, snapshotID := range snapshotIDs {
-			snapshots = append(snapshots, fmt.Sprintf("%x:/", snapshotID))
+			snapshots = append(snapshots, fmt.Sprintf("%x:", snapshotID))
 		}
 	} else {
 		for _, snapshotPath := range cmd.Snapshots {
