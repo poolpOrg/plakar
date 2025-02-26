@@ -642,7 +642,8 @@ func (ls *LocalState) BlobExists(Type resources.Type, blobMAC objects.MAC) bool 
 			continue
 		}
 
-		if ok {
+		deleted, _ := ls.HasDeletedResource(resources.RT_PACKFILE, de.Location.Packfile)
+		if ok && !deleted {
 			return true
 		}
 	}

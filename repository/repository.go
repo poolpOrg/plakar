@@ -686,16 +686,6 @@ func (r *Repository) GetBlob(Type resources.Type, mac objects.MAC) (io.ReadSeeke
 		return nil, ErrPackfileNotFound
 	}
 
-	has, err := r.HasDeletedPackfile(loc.Packfile)
-	if err != nil {
-		return nil, err
-	}
-
-	if has {
-		error := fmt.Errorf("Cleanup was too eager, we have a referenced blob (%x) in a deleted packfile (%x)\n", mac, loc.Packfile)
-		r.Logger().Error("GetBlob(%s, %x): %s", Type, mac, error)
-	}
-
 	rd, err := r.GetPackfileBlob(loc)
 	if err != nil {
 		return nil, err
