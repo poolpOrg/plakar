@@ -2,6 +2,7 @@ package s3
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http/httptest"
 	"testing"
@@ -21,22 +22,23 @@ func TestS3Backend(t *testing.T) {
 	defer ts.Close()
 
 	// create a repository
-	repo := NewRepository(ts.URL)
-	if repo == nil {
-		t.Fatal("error creating repository")
+	repo, err := NewRepository(map[string]string{"location": ts.URL + "/testbucket", "access_key": "", "secret_access_key": ""})
+	if err != nil {
+		t.Fatal("error creating repository", err)
 	}
 
 	location := repo.Location()
-	require.Equal(t, ts.URL, location)
+	fmt.Println(location)
+	require.Equal(t, ts.URL+"/testbucket", location)
 
 	config := storage.NewConfiguration()
 	serializedConfig, err := config.ToBytes()
 	require.NoError(t, err)
 
-	err = repo.Create(ts.URL+"/bucket", serializedConfig)
+	err = repo.Create(serializedConfig)
 	require.NoError(t, err)
 
-	_, err = repo.Open(ts.URL + "/bucket")
+	_, err = repo.Open()
 	require.NoError(t, err)
 
 	err = repo.Close()

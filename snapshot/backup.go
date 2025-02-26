@@ -188,15 +188,9 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 	return filesChannel, nil
 }
 
-func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *BackupOptions) error {
+func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) error {
 	snap.Event(events.StartEvent())
 	defer snap.Event(events.DoneEvent())
-
-	imp, err := importer.NewImporter(scanDir)
-	if err != nil {
-		return err
-	}
-	defer imp.Close()
 
 	vfsCache, err := snap.AppContext().GetCache().VFS(imp.Type(), imp.Origin())
 	if err != nil {
@@ -214,21 +208,24 @@ func (snap *Snapshot) Backup(scanDir string, imp importer.Importer, options *Bac
 	snap.Header.Tags = append(snap.Header.Tags, options.Tags...)
 
 	if options.Name == "" {
-		snap.Header.Name = scanDir + " @ " + snap.Header.GetSource(0).Importer.Origin
+		snap.Header.Name = imp.Root() + " @ " + snap.Header.GetSource(0).Importer.Origin
 	} else {
 		snap.Header.Name = options.Name
 	}
 
-	if !strings.Contains(scanDir, "://") {
-		scanDir, err = filepath.Abs(scanDir)
-		if err != nil {
-			snap.Logger().Warn("%s", err)
-			return err
+	/*
+		if !strings.Contains(scanDir, "://") {
+			scanDir, err = filepath.Abs(scanDir)
+			if err != nil {
+				snap.Logger().Warn("%s", err)
+				return err
+			}
+		} else {
+			scanDir = imp.Root()
 		}
-	} else {
-		scanDir = imp.Root()
-	}
-	snap.Header.GetSource(0).Importer.Directory = scanDir
+	*/
+
+	snap.Header.GetSource(0).Importer.Directory = imp.Root()
 
 	maxConcurrency := options.MaxConcurrency
 	if maxConcurrency == 0 {

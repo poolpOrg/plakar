@@ -38,7 +38,7 @@ func _Test_RepositoryConfiguration(t *testing.T) {
 	require.NoError(t, err)
 	wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 	require.NoError(t, err)
-	lstore, err := storage.Create("/test/location", wrappedConfig)
+	lstore, err := storage.Create(map[string]string{"location": "/test/location"}, wrappedConfig)
 	require.NoError(t, err, "creating storage")
 
 	ctx := appcontext.NewAppContext()
@@ -317,7 +317,7 @@ func _Test_RepositorySnapshots(t *testing.T) {
 			wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 			require.NoError(t, err)
 
-			lstore, err := storage.Create(c.location, wrappedConfig)
+			lstore, err := storage.Create(map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
 
 			ctx := appcontext.NewAppContext()
@@ -416,7 +416,7 @@ func _Test_RepositorySnapshotsErrors(t *testing.T) {
 			wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 			require.NoError(t, err)
 
-			lstore, err := storage.Create(c.location, wrappedConfig)
+			lstore, err := storage.Create(map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
 
 			ctx := appcontext.NewAppContext()
@@ -490,7 +490,7 @@ func _Test_RepositoryStates(t *testing.T) {
 			wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 			require.NoError(t, err)
 
-			lstore, err := storage.Create(c.location, wrappedConfig)
+			lstore, err := storage.Create(map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
 
 			ctx := appcontext.NewAppContext()
@@ -558,7 +558,7 @@ func _Test_RepositoryState(t *testing.T) {
 			wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 			require.NoError(t, err)
 
-			lstore, err := storage.Create(c.location, wrappedConfig)
+			lstore, err := storage.Create(map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
 
 			ctx := appcontext.NewAppContext()
@@ -631,7 +631,7 @@ func Test_RepositoryStateErrors(t *testing.T) {
 			wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 			require.NoError(t, err)
 
-			lstore, err := storage.Create(c.location, wrappedConfig)
+			lstore, err := storage.Create(map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
 
 			ctx := appcontext.NewAppContext()
