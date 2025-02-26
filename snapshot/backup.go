@@ -86,6 +86,7 @@ func (snapshot *Snapshot) skipExcludedPathname(options *BackupOptions, record *i
 	case record.Error != nil:
 		pathname = record.Error.Pathname
 	}
+
 	doExclude := false
 	for _, exclude := range options.Excludes {
 		if exclude.Match(pathname) {
@@ -104,6 +105,7 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 
 	wg := sync.WaitGroup{}
 	filesChannel := make(chan *importer.ScanRecord, 1000)
+	repoLocation := snap.repository.Location()
 
 	go func() {
 		startEvent := events.StartImporterEvent()
@@ -143,6 +145,12 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 				case record.Record != nil:
 					record := record.Record
 					snap.Event(events.PathEvent(snap.Header.Identifier, record.Pathname))
+
+					if strings.HasPrefix(record.Pathname, repoLocation+"/") {
+						snap.Logger().Warn("skipping entry from repository: %s", record.Pathname)
+						// skip repository directory
+						return
+					}
 
 					if !record.FileInfo.Mode().IsDir() {
 						filesChannel <- record
