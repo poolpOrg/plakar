@@ -171,13 +171,13 @@ func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	}
 
 	if cmd.Location == "" {
-		repo, err := storage.Create(filepath.Join(ctx.HomeDir, ".plakar"), wrappedConfig)
+		repo, err := storage.Create(map[string]string{"location": filepath.Join(ctx.HomeDir, ".plakar")}, wrappedConfig)
 		if err != nil {
 			return 1, err
 		}
 		repo.Close()
 	} else {
-		repo, err := storage.Create(cmd.Location, wrappedConfig)
+		repo, err := storage.Create(map[string]string{"location": cmd.Location}, wrappedConfig)
 		if err != nil {
 			return 1, err
 		}
