@@ -19,7 +19,6 @@ package version
 import (
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
