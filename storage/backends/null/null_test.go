@@ -12,9 +12,9 @@ import (
 
 func TestNullBackend(t *testing.T) {
 	// create a repository
-	repo := NewRepository("/test/location")
-	if repo == nil {
-		t.Fatal("error creating repository")
+	repo, err := NewRepository(map[string]string{"location": "/test/location"})
+	if err != nil {
+		t.Fatal("error creating repository", err)
 	}
 
 	location := repo.Location()
@@ -24,10 +24,10 @@ func TestNullBackend(t *testing.T) {
 	serializedConfig, err := config.ToBytes()
 	require.NoError(t, err)
 
-	err = repo.Create(location, serializedConfig)
+	err = repo.Create(serializedConfig)
 	require.NoError(t, err)
 
-	_, err = repo.Open(location)
+	_, err = repo.Open()
 	require.NoError(t, err)
 	// only test one field
 	//require.Equal(t, repo.Configuration().Version, versioning.FromString(storage.VERSION))

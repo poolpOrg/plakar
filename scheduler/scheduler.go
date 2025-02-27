@@ -37,7 +37,7 @@ func (s *Scheduler) Run() {
 		}
 	}
 
-	for _, tasksetCfg := range s.config.Agent.TaskSets {
+	for _, tasksetCfg := range s.config.Agent.Tasks {
 		if tasksetCfg.Backup != nil {
 			err := s.backupTask(tasksetCfg, *tasksetCfg.Backup)
 			if err != nil {

@@ -43,8 +43,9 @@ func generateSnapshot(t *testing.T, keyPair *keypair.KeyPair) *Snapshot {
 	require.NoError(t, err)
 
 	// create a storage
-	r := bfs.NewRepository("fs://" + tmpRepoDir)
+	r, err := bfs.NewRepository(map[string]string{"location": "fs://" + tmpRepoDir})
 	require.NotNil(t, r)
+	require.NoError(t, err)
 	config := storage.NewConfiguration()
 	serialized, err := config.ToBytes()
 	require.NoError(t, err)
@@ -56,11 +57,11 @@ func generateSnapshot(t *testing.T, keyPair *keypair.KeyPair) *Snapshot {
 	wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 	require.NoError(t, err)
 
-	err = r.Create("fs://"+tmpRepoDir, wrappedConfig)
+	err = r.Create(wrappedConfig)
 	require.NoError(t, err)
 
 	// open the storage to load the configuration
-	r, serializedConfig, err := storage.Open("fs://" + tmpRepoDir)
+	r, serializedConfig, err := storage.Open(map[string]string{"location": "fs://" + tmpRepoDir})
 	require.NoError(t, err)
 
 	// create a repository
@@ -82,9 +83,9 @@ func generateSnapshot(t *testing.T, keyPair *keypair.KeyPair) *Snapshot {
 	require.NoError(t, err)
 	require.NotNil(t, snap)
 
-	imp, err := fs.NewFSImporter(tmpBackupDir)
+	imp, err := fs.NewFSImporter(map[string]string{"location": tmpBackupDir})
 	require.NoError(t, err)
-	snap.Backup(tmpBackupDir, imp, &BackupOptions{Name: "test_backup", MaxConcurrency: 1})
+	snap.Backup(imp, &BackupOptions{Name: "test_backup", MaxConcurrency: 1})
 
 	return snap
 }

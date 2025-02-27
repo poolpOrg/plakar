@@ -92,10 +92,10 @@ func defaultSigners() ([]ssh.Signer, error) {
 	return signers, nil
 }
 
-func NewRepository(location string) storage.Store {
+func NewRepository(storeConfig map[string]string) (storage.Store, error) {
 	return &Repository{
-		location: location,
-	}
+		location: storeConfig["location"],
+	}, nil
 }
 
 func (repo *Repository) Location() string {
@@ -171,8 +171,8 @@ func connect(location string) (*sftp.Client, error) {
 	return sftpClient, nil
 }
 
-func (repo *Repository) Create(location string, config []byte) error {
-	client, err := connect(location)
+func (repo *Repository) Create(config []byte) error {
+	client, err := connect(repo.location)
 	if err != nil {
 		return err
 	}
@@ -200,8 +200,8 @@ func (repo *Repository) Create(location string, config []byte) error {
 	return WriteToFileAtomic(client, repo.Path("CONFIG"), bytes.NewReader(config))
 }
 
-func (repo *Repository) Open(location string) ([]byte, error) {
-	client, err := connect(location)
+func (repo *Repository) Open() ([]byte, error) {
+	client, err := connect(repo.location)
 	if err != nil {
 		return nil, err
 	}

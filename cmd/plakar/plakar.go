@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -247,9 +248,9 @@ func entryPoint() int {
 
 	ctx.SetLogger(logger)
 
-	command, args := flag.Args()[0], flag.Args()[1:]
-
 	var repositoryPath string
+
+	command, args := flag.Args()[0], flag.Args()[1:]
 	if flag.Arg(0) == "at" {
 		if len(flag.Args()) < 2 {
 			log.Fatalf("%s: missing plakar repository", flag.CommandLine.Name())
@@ -262,14 +263,34 @@ func entryPoint() int {
 	} else {
 		repositoryPath = os.Getenv("PLAKAR_REPOSITORY")
 		if repositoryPath == "" {
-			repositoryPath = filepath.Join(ctx.HomeDir, ".plakar")
+			def := ctx.Config.DefaultRepository
+			if def != "" {
+				repositoryPath = "@" + def
+			} else {
+				repositoryPath = filepath.Join(ctx.HomeDir, ".plakar")
+			}
+		}
+	}
+
+	storeConfig := map[string]string{"location": repositoryPath}
+	if strings.HasPrefix(repositoryPath, "@") {
+		remote, ok := ctx.Config.GetRepository(repositoryPath[1:])
+		if !ok {
+			fmt.Fprintf(os.Stderr, "%s: could not resolve repository: %s\n", flag.CommandLine.Name(), repositoryPath)
+			return 1
+		}
+		if _, ok := remote["location"]; !ok {
+			fmt.Fprintf(os.Stderr, "%s: could not resolve repository location: %s\n", flag.CommandLine.Name(), repositoryPath)
+			return 1
+		} else {
+			storeConfig = remote
 		}
 	}
 
 	// create is a special case, it operates without a repository...
 	// but needs a repository location to store the new repository
 	if command == "create" {
-		repo, err := repository.Inexistant(ctx, repositoryPath)
+		repo, err := repository.Inexistant(ctx, storeConfig["location"])
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 			return 1
@@ -309,68 +330,70 @@ func entryPoint() int {
 		skipPassphrase = true
 	}
 
-	if strings.HasPrefix(repositoryPath, "@") {
-		tmp, exists := ctx.Config.Lookup(repositoryPath[1:], "URL")
-		if !exists {
-			fmt.Fprintf(os.Stderr, "%s: could not resolve repository: %s\n", flag.CommandLine.Name(), repositoryPath)
-			return 1
-		}
-		repositoryPath = tmp.(string)
+	store, serializedConfig, err := storage.Open(storeConfig)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: failed to open the repository at %s: %s\n", flag.CommandLine.Name(), storeConfig["location"], err)
+		fmt.Fprintln(os.Stderr, "To specify an alternative repository, please use \"plakar at <location> <command>\".")
+		return 1
 	}
 
-	store, serializedConfig, err := storage.Open(repositoryPath)
+	repoConfig, err := storage.NewConfigurationFromWrappedBytes(serializedConfig)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}
 
-	storeConfig, err := storage.NewConfigurationFromWrappedBytes(serializedConfig)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
-		return 1
-	}
-
-	if storeConfig.Version != versioning.FromString(storage.VERSION) {
+	if repoConfig.Version != versioning.FromString(storage.VERSION) {
 		fmt.Fprintf(os.Stderr, "%s: incompatible repository version: %s != %s\n",
-			flag.CommandLine.Name(), storeConfig.Version, storage.VERSION)
+			flag.CommandLine.Name(), repoConfig.Version, storage.VERSION)
 		return 1
 	}
 
 	var secret []byte
 	if !skipPassphrase {
-		if storeConfig.Encryption != nil {
+		if repoConfig.Encryption != nil {
 			derived := false
 			envPassphrase := os.Getenv("PLAKAR_PASSPHRASE")
 			if ctx.KeyFromFile == "" {
-				for attempts := 0; attempts < 3; attempts++ {
-					var passphrase []byte
-					if envPassphrase == "" {
-						passphrase, err = utils.GetPassphrase("repository")
-						if err != nil {
-							break
+				if passphrase, ok := storeConfig["passphrase"]; ok {
+					key, err := encryption.DeriveKey(repoConfig.Encryption.KDFParams, []byte(passphrase))
+					if err == nil {
+						if encryption.VerifyCanary(repoConfig.Encryption, key) {
+							secret = key
+							derived = true
 						}
-					} else {
-						passphrase = []byte(envPassphrase)
 					}
+				} else {
+					for attempts := 0; attempts < 3; attempts++ {
+						var passphrase []byte
+						if envPassphrase == "" {
+							passphrase, err = utils.GetPassphrase("repository")
+							if err != nil {
+								break
+							}
+						} else {
+							passphrase = []byte(envPassphrase)
+						}
 
-					key, err := encryption.DeriveKey(storeConfig.Encryption.KDFParams, passphrase)
-					if err != nil {
-						continue
-					}
-					if !encryption.VerifyCanary(storeConfig.Encryption, key) {
-						if envPassphrase != "" {
-							break
+						key, err := encryption.DeriveKey(repoConfig.Encryption.KDFParams, passphrase)
+						if err != nil {
+							continue
 						}
-						continue
+						if !encryption.VerifyCanary(repoConfig.Encryption, key) {
+							if envPassphrase != "" {
+								break
+							}
+							continue
+						}
+						secret = key
+						derived = true
+						break
 					}
-					secret = key
-					derived = true
-					break
 				}
 			} else {
-				key, err := encryption.DeriveKey(storeConfig.Encryption.KDFParams, []byte(ctx.KeyFromFile))
+				key, err := encryption.DeriveKey(repoConfig.Encryption.KDFParams, []byte(ctx.KeyFromFile))
 				if err == nil {
-					if encryption.VerifyCanary(storeConfig.Encryption, key) {
+					if encryption.VerifyCanary(repoConfig.Encryption, key) {
 						secret = key
 						derived = true
 					}
@@ -428,7 +451,11 @@ func entryPoint() int {
 			defer ctx.GetCache().Close()
 
 			if err := repo.RebuildState(); err != nil {
-				fmt.Fprintf(os.Stderr, "%s: failed to rebuild state: %s\n", flag.CommandLine.Name(), err)
+				if errors.Is(err, caching.ErrInUse) {
+					fmt.Fprintf(os.Stderr, "%s: the agentless cache is locked by another process. To run multiple processes concurrently, start `plakar agent` and run your command again.\n", flag.CommandLine.Name())
+				} else {
+					fmt.Fprintf(os.Stderr, "%s: failed to rebuild state: %s\n", flag.CommandLine.Name(), err)
+				}
 				return 1
 			}
 

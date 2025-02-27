@@ -609,7 +609,7 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 					clientContext.SetSecret(repositorySecret)
 				}
 
-				store, serializedConfig, err := storage.Open(repositoryLocation)
+				store, serializedConfig, err := storage.Open(map[string]string{"location": repositoryLocation})
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to open storage: %s\n", err)
 					return

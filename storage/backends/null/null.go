@@ -34,22 +34,22 @@ func init() {
 	storage.Register("null", NewRepository)
 }
 
-func NewRepository(location string) storage.Store {
+func NewRepository(storeConfig map[string]string) (storage.Store, error) {
 	return &Repository{
-		location: location,
-	}
+		location: storeConfig["location"],
+	}, nil
 }
 
 func (repo *Repository) Location() string {
 	return repo.location
 }
 
-func (repository *Repository) Create(location string, config []byte) error {
+func (repository *Repository) Create(config []byte) error {
 	repository.config = config
 	return nil
 }
 
-func (repository *Repository) Open(location string) ([]byte, error) {
+func (repository *Repository) Open() ([]byte, error) {
 	return repository.config, nil
 }
 

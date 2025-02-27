@@ -39,10 +39,10 @@ func init() {
 	storage.Register("http", NewRepository)
 }
 
-func NewRepository(location string) storage.Store {
+func NewRepository(storeConfig map[string]string) (storage.Store, error) {
 	return &Repository{
-		location: location,
-	}
+		location: storeConfig["location"],
+	}, nil
 }
 
 func (repo *Repository) Location() string {
@@ -63,13 +63,13 @@ func (repo *Repository) sendRequest(method string, url string, requestType strin
 	return client.Do(req)
 }
 
-func (repo *Repository) Create(location string, config []byte) error {
+func (repo *Repository) Create(config []byte) error {
 	return nil
 }
 
-func (repo *Repository) Open(location string) ([]byte, error) {
-	repo.Repository = location
-	r, err := repo.sendRequest("GET", location, "/", network.ReqOpen{
+func (repo *Repository) Open() ([]byte, error) {
+	repo.Repository = repo.location
+	r, err := repo.sendRequest("GET", repo.location, "/", network.ReqOpen{
 		Repository: "",
 	})
 	if err != nil {

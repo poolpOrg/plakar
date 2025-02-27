@@ -37,8 +37,10 @@ func init() {
 	importer.Register("fs", NewFSImporter)
 }
 
-func NewFSImporter(location string) (importer.Importer, error) {
+func NewFSImporter(config map[string]string) (importer.Importer, error) {
 	var err error
+
+	location := config["location"]
 
 	if strings.HasPrefix(location, "fs://") {
 		location = location[4:]
