@@ -49,7 +49,7 @@ type Config struct {
 
 func (cmd *Config) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	if len(cmd.args) == 0 {
-		ctx.Config.Render(os.Stdout)
+		ctx.Config.Render(ctx.Stdout)
 		return 0, nil
 	}
 
