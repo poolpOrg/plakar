@@ -83,9 +83,9 @@ func generateSnapshot(t *testing.T, keyPair *keypair.KeyPair) *Snapshot {
 	require.NoError(t, err)
 	require.NotNil(t, snap)
 
-	imp, err := fs.NewFSImporter(tmpBackupDir)
+	imp, err := fs.NewFSImporter(map[string]string{"location": tmpBackupDir})
 	require.NoError(t, err)
-	snap.Backup(tmpBackupDir, imp, &BackupOptions{Name: "test_backup", MaxConcurrency: 1})
+	snap.Backup(imp, &BackupOptions{Name: "test_backup", MaxConcurrency: 1})
 
 	return snap
 }

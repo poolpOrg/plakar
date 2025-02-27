@@ -41,16 +41,17 @@ type S3Importer struct {
 	scanDir     string
 
 	ino uint64
+
+	accessKey       string
+	secretAccessKey string
 }
 
 func init() {
 	importer.Register("s3", NewS3Importer)
 }
 
-func connect(location *url.URL) (*minio.Client, error) {
+func connect(location *url.URL, accessKeyID, secretAccessKey string) (*minio.Client, error) {
 	endpoint := location.Host
-	accessKeyID := location.User.Username()
-	secretAccessKey, _ := location.User.Password()
 	useSSL := false
 
 	// Initialize minio client object.
@@ -60,13 +61,29 @@ func connect(location *url.URL) (*minio.Client, error) {
 	})
 }
 
-func NewS3Importer(location string) (importer.Importer, error) {
+func NewS3Importer(config map[string]string) (importer.Importer, error) {
+
+	location := config["location"]
+	var accessKey string
+	if tmp, ok := config["access_key"]; !ok {
+		return nil, fmt.Errorf("missing access_key")
+	} else {
+		accessKey = tmp
+	}
+
+	var secretAccessKey string
+	if tmp, ok := config["secret_access_key"]; !ok {
+		return nil, fmt.Errorf("missing secret_access_key")
+	} else {
+		secretAccessKey = tmp
+	}
+
 	parsed, err := url.Parse(location)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := connect(parsed)
+	conn, err := connect(parsed, accessKey, secretAccessKey)
 	if err != nil {
 		return nil, err
 	}
@@ -76,10 +93,12 @@ func NewS3Importer(location string) (importer.Importer, error) {
 	scanDir := filepath.Clean("/" + strings.Join(atoms[1:], "/"))
 
 	return &S3Importer{
-		bucket:      bucket,
-		scanDir:     scanDir,
-		minioClient: conn,
-		host:        parsed.Host,
+		bucket:          bucket,
+		scanDir:         scanDir,
+		minioClient:     conn,
+		host:            parsed.Host,
+		accessKey:       accessKey,
+		secretAccessKey: secretAccessKey,
 	}, nil
 }
 
@@ -104,7 +123,7 @@ func (p *S3Importer) scanRecursive(prefix string, result chan *importer.ScanResu
 				0,
 				0,
 			)
-			result <- importer.NewScanRecord("/" + object.Key, "", fi, nil)
+			result <- importer.NewScanRecord("/"+object.Key, "", fi, nil)
 		}
 	}
 
@@ -126,7 +145,7 @@ func (p *S3Importer) scanRecursive(prefix string, result chan *importer.ScanResu
 		0,
 		0,
 	)
-	result <- importer.NewScanRecord("/" + prefix, "", fi, nil)
+	result <- importer.NewScanRecord("/"+prefix, "", fi, nil)
 }
 
 func (p *S3Importer) Scan() (<-chan *importer.ScanResult, error) {
