@@ -105,8 +105,8 @@ func (c *Configuration) ToBytes() ([]byte, error) {
 }
 
 type Store interface {
-	Create(repository string, config []byte) error
-	Open(repository string) ([]byte, error)
+	Create(config []byte) error
+	Open() ([]byte, error)
 	Location() string
 
 	GetStates() ([]objects.MAC, error)
@@ -124,21 +124,20 @@ type Store interface {
 }
 
 var muBackends sync.Mutex
-var backends map[string]func(string) Store = make(map[string]func(string) Store)
+var backends = make(map[string]func(map[string]string) (Store, error))
 
-func NewStore(name string, location string) (Store, error) {
+func NewStore(name string, storeConfig map[string]string) (Store, error) {
 	muBackends.Lock()
 	defer muBackends.Unlock()
 
 	if backend, exists := backends[name]; !exists {
 		return nil, fmt.Errorf("backend '%s' does not exist", name)
 	} else {
-		backendInstance := backend(location)
-		return backendInstance, nil
+		return backend(storeConfig)
 	}
 }
 
-func Register(name string, backend func(string) Store) {
+func Register(name string, backend func(map[string]string) (Store, error)) {
 	muBackends.Lock()
 	defer muBackends.Unlock()
 
@@ -162,7 +161,12 @@ func Backends() []string {
 	return ret
 }
 
-func New(location string) (Store, error) {
+func New(storeConfig map[string]string) (Store, error) {
+	location, ok := storeConfig["location"]
+	if !ok {
+		return nil, fmt.Errorf("missing location")
+	}
+
 	backendName := "fs"
 	if !strings.HasPrefix(location, "/") {
 		if strings.HasPrefix(location, "http://") || strings.HasPrefix(location, "https://") {
@@ -191,17 +195,17 @@ func New(location string) (Store, error) {
 			location = tmp
 		}
 	}
-	return NewStore(backendName, location)
+	return NewStore(backendName, storeConfig)
 }
 
-func Open(location string) (Store, []byte, error) {
-	store, err := New(location)
+func Open(storeConfig map[string]string) (Store, []byte, error) {
+	store, err := New(storeConfig)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 		return nil, nil, err
 	}
 
-	serializedConfig, err := store.Open(location)
+	serializedConfig, err := store.Open()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -209,14 +213,14 @@ func Open(location string) (Store, []byte, error) {
 	return store, serializedConfig, nil
 }
 
-func Create(location string, configuration []byte) (Store, error) {
-	store, err := New(location)
+func Create(storeConfig map[string]string, configuration []byte) (Store, error) {
+	store, err := New(storeConfig)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 		return nil, err
 	}
 
-	if err = store.Create(location, configuration); err != nil {
+	if err = store.Create(configuration); err != nil {
 		return nil, err
 	} else {
 		return store, nil

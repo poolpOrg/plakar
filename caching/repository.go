@@ -3,16 +3,20 @@ package caching
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"iter"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/resources"
 	"github.com/google/uuid"
 	"github.com/syndtr/goleveldb/leveldb"
 )
+
+var ErrInUse = fmt.Errorf("cache in use")
 
 type _RepositoryCache struct {
 	manager *Manager
@@ -24,6 +28,9 @@ func newRepositoryCache(cacheManager *Manager, repositoryID uuid.UUID) (*_Reposi
 
 	db, err := leveldb.OpenFile(cacheDir, nil)
 	if err != nil {
+		if errors.Is(err, syscall.EAGAIN) {
+			return nil, ErrInUse
+		}
 		return nil, err
 	}
 

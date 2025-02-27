@@ -42,7 +42,7 @@ func TestAuthMiddleware(t *testing.T) {
 	wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 	require.NoError(t, err)
 
-	lstore, err := storage.Create("/test/location", wrappedConfig)
+	lstore, err := storage.Create(map[string]string{"location": "/test/location"}, wrappedConfig)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -99,7 +99,7 @@ func Test_UnknownEndpoint(t *testing.T) {
 	wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 	require.NoError(t, err)
 
-	lstore, err := storage.Create("/test/location", wrappedConfig)
+	lstore, err := storage.Create(map[string]string{"location": "/test/location"}, wrappedConfig)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

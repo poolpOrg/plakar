@@ -19,7 +19,6 @@ package version
 import (
 	"flag"
 	"fmt"
-	"strings"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
@@ -38,13 +37,8 @@ func parse_cmd_config(ctx *appcontext.AppContext, repo *repository.Repository, a
 	}
 
 	flags.Parse(args)
-	args = flags.Args()
-	if len(args) > 1 {
-		return nil, fmt.Errorf("too many arguments")
-	}
-
 	return &Config{
-		args: args,
+		args: flags.Args(),
 	}, nil
 }
 
@@ -54,31 +48,111 @@ type Config struct {
 
 func (cmd *Config) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	if len(cmd.args) == 0 {
-		for label, values := range ctx.Config.Labels {
-			fmt.Fprintf(ctx.Stdout, "%s:\n", label)
-			for k, v := range values {
-				fmt.Fprintf(ctx.Stdout, "  %s: %v\n", k, v)
-			}
-		}
+		ctx.Config.Render(ctx.Stdout)
 		return 0, nil
 	}
 
-	kv := strings.SplitN(cmd.args[0], "=", 2)
-	key := strings.TrimSpace(kv[0])
-	atoms := strings.Split(key, ".")
-	if len(atoms) < 2 {
-		return 0, fmt.Errorf("config: invalid key")
+	var err error
+	switch cmd.args[0] {
+	case "remote":
+		err = cmd_remote(ctx, repo, cmd.args[1:])
+	case "repository", "repo":
+		err = cmd_repository(ctx, repo, cmd.args[1:])
+	default:
+		err = fmt.Errorf("unknown subcommand %s", cmd.args[0])
 	}
 
-	if len(kv) == 1 {
-		if val, ok := ctx.Config.Lookup(atoms[0], atoms[1]); ok {
-			fmt.Println(val)
-		}
-	} else {
-		value := strings.TrimSpace(kv[1])
-		ctx.Config.Set(atoms[0], atoms[1], value)
-		ctx.Config.Save()
+	if err != nil {
+		return 1, err
 	}
-
 	return 0, nil
+}
+
+func cmd_remote(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("usage: plakar config remote [create | set | validate]")
+	}
+
+	switch args[0] {
+	case "create":
+		if len(args) != 2 {
+			return fmt.Errorf("usage: plakar config remote create name")
+		}
+		name := args[1]
+		if ctx.Config.HasRemote(name) {
+			return fmt.Errorf("remote %q already exists", name)
+		}
+		ctx.Config.Remotes[name] = make(map[string]string)
+		return ctx.Config.Save()
+
+	case "set":
+		if len(args) != 4 {
+			return fmt.Errorf("usage: plakar config remote set name key value")
+		}
+		name, key, value := args[1], args[2], args[3]
+		if !ctx.Config.HasRemote(name) {
+			return fmt.Errorf("remote %q does not exists", name)
+		}
+		ctx.Config.Remotes[name][key] = value
+		return ctx.Config.Save()
+
+	case "validate":
+		if len(args) != 2 {
+			return fmt.Errorf("usage: plakar config remote validate name")
+		}
+		return fmt.Errorf("validtion not implemented")
+
+	default:
+		return fmt.Errorf("usage: plakar config remote [create | set | validate]")
+	}
+}
+
+func cmd_repository(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("usage: plakar config repository [create | default | set | validate]")
+	}
+
+	switch args[0] {
+	case "create":
+		if len(args) != 2 {
+			return fmt.Errorf("usage: plakar config repository create name")
+		}
+		name := args[1]
+		if ctx.Config.HasRepository(name) {
+			return fmt.Errorf("repository %q already exists", name)
+		}
+		ctx.Config.Repositories[name] = make(map[string]string)
+		return ctx.Config.Save()
+
+	case "default":
+		if len(args) != 2 {
+			return fmt.Errorf("usage: plakar config repository default name")
+		}
+		name := args[1]
+		if !ctx.Config.HasRepository(name) {
+			return fmt.Errorf("repository %q doesn't exist", name)
+		}
+		ctx.Config.DefaultRepository = name
+		return ctx.Config.Save()
+
+	case "set":
+		if len(args) != 4 {
+			return fmt.Errorf("usage: plakar config repository set name key value")
+		}
+		name, key, value := args[1], args[2], args[3]
+		if !ctx.Config.HasRepository(name) {
+			return fmt.Errorf("repository %q does not exists", name)
+		}
+		ctx.Config.Repositories[name][key] = value
+		return ctx.Config.Save()
+
+	case "validate":
+		if len(args) != 2 {
+			return fmt.Errorf("usage: plakar config repository validate name")
+		}
+		return fmt.Errorf("validtion not implemented")
+
+	default:
+		return fmt.Errorf("usage: plakar config repository [create | default | set | validate]")
+	}
 }

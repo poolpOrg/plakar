@@ -144,7 +144,7 @@ func _TestSnapshotHeader(t *testing.T) {
 			wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 			require.NoError(t, err)
 
-			lstore, err := storage.Create(c.location, wrappedConfig)
+			lstore, err := storage.Create(map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
 
 			ctx := appcontext.NewAppContext()
@@ -217,7 +217,7 @@ func TestSnapshotHeaderErrors(t *testing.T) {
 			wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 			require.NoError(t, err)
 
-			lstore, err := storage.Create(c.location, wrappedConfig)
+			lstore, err := storage.Create(map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
 
 			ctx := appcontext.NewAppContext()
@@ -275,7 +275,7 @@ func _TestSnapshotSign(t *testing.T) {
 			wrappedConfig, err := io.ReadAll(wrappedConfigRd)
 			require.NoError(t, err)
 
-			lstore, err := storage.Create(c.location, wrappedConfig)
+			lstore, err := storage.Create(map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
 
 			ctx := appcontext.NewAppContext()

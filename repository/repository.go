@@ -44,7 +44,7 @@ type Repository struct {
 }
 
 func Inexistant(ctx *appcontext.AppContext, repositoryPath string) (*Repository, error) {
-	st, err := storage.New(repositoryPath)
+	st, err := storage.New(map[string]string{"location": repositoryPath})
 	if err != nil {
 		return nil, err
 	}
