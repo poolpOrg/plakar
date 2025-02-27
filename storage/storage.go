@@ -124,7 +124,7 @@ type Store interface {
 }
 
 var muBackends sync.Mutex
-var backends map[string]func(map[string]string) (Store, error) = make(map[string]func(map[string]string) (Store, error))
+var backends = make(map[string]func(map[string]string) (Store, error))
 
 func NewStore(name string, storeConfig map[string]string) (Store, error) {
 	muBackends.Lock()
