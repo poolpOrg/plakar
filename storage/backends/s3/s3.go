@@ -22,8 +22,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/PlakarKorp/plakar/network"
@@ -35,11 +35,14 @@ import (
 )
 
 type Repository struct {
-	config      storage.Configuration
 	location    string
 	Repository  string
 	minioClient *minio.Client
 	bucketName  string
+
+	useSsl          bool
+	accessKey       string
+	secretAccessKey string
 }
 
 func init() {
@@ -47,10 +50,36 @@ func init() {
 	storage.Register("s3", NewRepository)
 }
 
-func NewRepository(location string) storage.Store {
-	return &Repository{
-		location: location,
+func NewRepository(storeConfig map[string]string) (storage.Store, error) {
+	var accessKey string
+	if value, ok := storeConfig["access_key"]; !ok {
+		return nil, fmt.Errorf("missing access_key")
+	} else {
+		accessKey = value
 	}
+
+	var secretAccessKey string
+	if value, ok := storeConfig["secret_access_key"]; !ok {
+		return nil, fmt.Errorf("missing secret_access_key")
+	} else {
+		secretAccessKey = value
+	}
+
+	useSsl := true
+	if value, ok := storeConfig["use_ssl"]; ok {
+		tmp, err := strconv.ParseBool(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid use_ssl value")
+		}
+		useSsl = tmp
+	}
+
+	return &Repository{
+		location:        storeConfig["location"],
+		accessKey:       accessKey,
+		secretAccessKey: secretAccessKey,
+		useSsl:          useSsl,
+	}, nil
 }
 
 func (repo *Repository) Location() string {
@@ -59,25 +88,23 @@ func (repo *Repository) Location() string {
 
 func (repository *Repository) connect(location *url.URL) error {
 	endpoint := location.Host
-	accessKeyID := location.User.Username()
-	secretAccessKey, _ := location.User.Password()
-	useSSL := false
+	useSSL := repository.useSsl
 
 	// Initialize minio client object.
 	minioClient, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+		Creds:  credentials.NewStaticV4(repository.accessKey, repository.secretAccessKey, ""),
 		Secure: useSSL,
 	})
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	repository.minioClient = minioClient
 	return nil
 }
 
-func (repository *Repository) Create(location string, config []byte) error {
-	parsed, err := url.Parse(location)
+func (repository *Repository) Create(config []byte) error {
+	parsed, err := url.Parse(repository.location)
 	if err != nil {
 		return err
 	}
@@ -116,8 +143,8 @@ func (repository *Repository) Create(location string, config []byte) error {
 	return nil
 }
 
-func (repository *Repository) Open(location string) ([]byte, error) {
-	parsed, err := url.Parse(location)
+func (repository *Repository) Open() ([]byte, error) {
+	parsed, err := url.Parse(repository.location)
 	if err != nil {
 		return nil, err
 	}

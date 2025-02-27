@@ -19,13 +19,13 @@ package sftp
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
-	"log"
 	"net"
 	"net/url"
 	"os"
+	"os/user"
 	"path"
 	"strings"
 
@@ -78,7 +78,7 @@ func defaultSigners() ([]ssh.Signer, error) {
 	}
 
 	for _, file := range keyFiles {
-		data, err := ioutil.ReadFile(file)
+		data, err := os.ReadFile(file)
 		if err != nil {
 			continue // Skip files that don't exist.
 		}
@@ -92,10 +92,10 @@ func defaultSigners() ([]ssh.Signer, error) {
 	return signers, nil
 }
 
-func NewRepository(location string) storage.Store {
+func NewRepository(storeConfig map[string]string) (storage.Store, error) {
 	return &Repository{
-		location: location,
-	}
+		location: storeConfig["location"],
+	}, nil
 }
 
 func (repo *Repository) Location() string {
@@ -135,24 +135,32 @@ func connect(location string) (*sftp.Client, error) {
 	}
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatalf("failed to get home directory: %v", err)
+		return nil, fmt.Errorf("failed to get home directory: %v", err)
 	}
 	knownHostsPath := path.Join(homeDir, ".ssh", "known_hosts")
 
 	// Create the HostKeyCallback from the known_hosts file.
 	hostKeyCallback, err := knownhosts.New(knownHostsPath)
 	if err != nil {
-		log.Fatalf("could not create hostkeycallback function: %v", err)
+		return nil, fmt.Errorf("could not create hostkeycallback function: %v", err)
 	}
 
 	signers, err := defaultSigners()
 	if err != nil {
-		// Handle error appropriately.
-		panic(err)
+		return nil, err
+	}
+
+	username := parsed.User.Username()
+	if username == "" {
+		u, err := user.Current()
+		if err != nil {
+			return nil, err
+		}
+		username = u.Username
 	}
 
 	config := &ssh.ClientConfig{
-		User: parsed.User.Username(),
+		User: username,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signers...),
 		},
@@ -171,8 +179,8 @@ func connect(location string) (*sftp.Client, error) {
 	return sftpClient, nil
 }
 
-func (repo *Repository) Create(location string, config []byte) error {
-	client, err := connect(location)
+func (repo *Repository) Create(config []byte) error {
+	client, err := connect(repo.location)
 	if err != nil {
 		return err
 	}
@@ -200,8 +208,8 @@ func (repo *Repository) Create(location string, config []byte) error {
 	return WriteToFileAtomic(client, repo.Path("CONFIG"), bytes.NewReader(config))
 }
 
-func (repo *Repository) Open(location string) ([]byte, error) {
-	client, err := connect(location)
+func (repo *Repository) Open() ([]byte, error) {
+	client, err := connect(repo.location)
 	if err != nil {
 		return nil, err
 	}

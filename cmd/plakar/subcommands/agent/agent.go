@@ -92,7 +92,7 @@ func daemonize(argv []string) error {
 func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_foreground bool
 	var opt_stop bool
-	var opt_prometheus string
+	//var opt_prometheus string
 	var opt_tasks string
 	var opt_logfile string
 
@@ -104,7 +104,7 @@ func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, ar
 	}
 
 	flags.StringVar(&opt_tasks, "tasks", "", "tasks configuration file")
-	flags.StringVar(&opt_prometheus, "prometheus", "", "prometheus exporter interface, e.g. 127.0.0.1:9090")
+	//flags.StringVar(&opt_prometheus, "prometheus", "", "prometheus exporter interface, e.g. 127.0.0.1:9090")
 	flags.BoolVar(&opt_foreground, "foreground", false, "run in foreground")
 	flags.StringVar(&opt_logfile, "log", "", "log file")
 	flags.BoolVar(&opt_stop, "stop", false, "stop the agent")
@@ -147,7 +147,7 @@ func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, ar
 	}
 
 	return &Agent{
-		prometheus:  opt_prometheus,
+		//prometheus:  opt_prometheus,
 		socketPath:  filepath.Join(ctx.CacheDir, "agent.sock"),
 		schedConfig: schedConfig,
 	}, nil
@@ -609,7 +609,7 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 					clientContext.SetSecret(repositorySecret)
 				}
 
-				store, serializedConfig, err := storage.Open(repositoryLocation)
+				store, serializedConfig, err := storage.Open(map[string]string{"location": repositoryLocation})
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to open storage: %s\n", err)
 					return

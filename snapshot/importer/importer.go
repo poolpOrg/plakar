@@ -65,9 +65,9 @@ type Importer interface {
 }
 
 var muBackends sync.Mutex
-var backends map[string]func(config string) (Importer, error) = make(map[string]func(config string) (Importer, error))
+var backends map[string]func(config map[string]string) (Importer, error) = make(map[string]func(config map[string]string) (Importer, error))
 
-func Register(name string, backend func(string) (Importer, error)) {
+func Register(name string, backend func(map[string]string) (Importer, error)) {
 	muBackends.Lock()
 	defer muBackends.Unlock()
 
@@ -91,7 +91,12 @@ func Backends() []string {
 	return ret
 }
 
-func NewImporter(location string) (Importer, error) {
+func NewImporter(config map[string]string) (Importer, error) {
+	location, ok := config["location"]
+	if !ok {
+		return nil, fmt.Errorf("missing location")
+	}
+
 	muBackends.Lock()
 	defer muBackends.Unlock()
 
@@ -117,7 +122,7 @@ func NewImporter(location string) (Importer, error) {
 	if backend, exists := backends[backendName]; !exists {
 		return nil, fmt.Errorf("backend '%s' does not exist", backendName)
 	} else {
-		backendInstance, err := backend(location)
+		backendInstance, err := backend(config)
 		if err != nil {
 			return nil, err
 		}

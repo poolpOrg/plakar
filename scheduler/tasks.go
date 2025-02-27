@@ -15,7 +15,7 @@ import (
 	"github.com/PlakarKorp/plakar/storage"
 )
 
-func (s *Scheduler) backupTask(taskset TaskSet, task BackupConfig) error {
+func (s *Scheduler) backupTask(taskset Task, task BackupConfig) error {
 	interval, err := stringToDuration(task.Interval)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func (s *Scheduler) backupTask(taskset TaskSet, task BackupConfig) error {
 	}
 
 	backupSubcommand := &backup.Backup{}
-	backupSubcommand.RepositoryLocation = taskset.Repository.URL
+	backupSubcommand.RepositoryLocation = taskset.Repository.Location
 	if taskset.Repository.Passphrase != "" {
 		backupSubcommand.RepositorySecret = []byte(taskset.Repository.Passphrase)
 		_ = backupSubcommand.RepositorySecret
@@ -39,12 +39,12 @@ func (s *Scheduler) backupTask(taskset TaskSet, task BackupConfig) error {
 	backupSubcommand.Job = taskset.Name
 	backupSubcommand.Path = task.Path
 	backupSubcommand.Quiet = true
-	if task.Check {
+	if task.Check.Enabled {
 		backupSubcommand.OptCheck = true
 	}
 
 	rmSubcommand := &rm.Rm{}
-	rmSubcommand.RepositoryLocation = taskset.Repository.URL
+	rmSubcommand.RepositoryLocation = taskset.Repository.Location
 	if taskset.Repository.Passphrase != "" {
 		rmSubcommand.RepositorySecret = []byte(taskset.Repository.Passphrase)
 		_ = rmSubcommand.RepositorySecret
@@ -62,7 +62,7 @@ func (s *Scheduler) backupTask(taskset TaskSet, task BackupConfig) error {
 				time.Sleep(interval)
 			}
 
-			store, config, err := storage.Open(backupSubcommand.RepositoryLocation)
+			store, config, err := storage.Open(map[string]string{"location": backupSubcommand.RepositoryLocation})
 			if err != nil {
 				s.ctx.GetLogger().Error("Error opening storage: %s", err)
 				continue
@@ -106,14 +106,14 @@ func (s *Scheduler) backupTask(taskset TaskSet, task BackupConfig) error {
 	return nil
 }
 
-func (s *Scheduler) checkTask(taskset TaskSet, task CheckConfig) error {
+func (s *Scheduler) checkTask(taskset Task, task CheckConfig) error {
 	interval, err := stringToDuration(task.Interval)
 	if err != nil {
 		return err
 	}
 
 	checkSubcommand := &check.Check{}
-	checkSubcommand.RepositoryLocation = taskset.Repository.URL
+	checkSubcommand.RepositoryLocation = taskset.Repository.Location
 	if taskset.Repository.Passphrase != "" {
 		checkSubcommand.RepositorySecret = []byte(taskset.Repository.Passphrase)
 		_ = checkSubcommand.RepositorySecret
@@ -136,7 +136,7 @@ func (s *Scheduler) checkTask(taskset TaskSet, task CheckConfig) error {
 				time.Sleep(interval)
 			}
 
-			store, config, err := storage.Open(checkSubcommand.RepositoryLocation)
+			store, config, err := storage.Open(map[string]string{"location": checkSubcommand.RepositoryLocation})
 			if err != nil {
 				s.ctx.GetLogger().Error("Error opening storage: %s", err)
 				continue
@@ -165,14 +165,14 @@ func (s *Scheduler) checkTask(taskset TaskSet, task CheckConfig) error {
 	return nil
 }
 
-func (s *Scheduler) restoreTask(taskset TaskSet, task RestoreConfig) error {
+func (s *Scheduler) restoreTask(taskset Task, task RestoreConfig) error {
 	interval, err := stringToDuration(task.Interval)
 	if err != nil {
 		return err
 	}
 
 	restoreSubcommand := &restore.Restore{}
-	restoreSubcommand.RepositoryLocation = taskset.Repository.URL
+	restoreSubcommand.RepositoryLocation = taskset.Repository.Location
 	if taskset.Repository.Passphrase != "" {
 		restoreSubcommand.RepositorySecret = []byte(taskset.Repository.Passphrase)
 		_ = restoreSubcommand.RepositorySecret
@@ -195,7 +195,7 @@ func (s *Scheduler) restoreTask(taskset TaskSet, task RestoreConfig) error {
 				time.Sleep(interval)
 			}
 
-			store, config, err := storage.Open(restoreSubcommand.RepositoryLocation)
+			store, config, err := storage.Open(map[string]string{"location": restoreSubcommand.RepositoryLocation})
 			if err != nil {
 				s.ctx.GetLogger().Error("Error opening storage: %s", err)
 				continue
@@ -224,25 +224,25 @@ func (s *Scheduler) restoreTask(taskset TaskSet, task RestoreConfig) error {
 	return nil
 }
 
-func (s *Scheduler) syncTask(taskset TaskSet, task SyncConfig) error {
+func (s *Scheduler) syncTask(taskset Task, task SyncConfig) error {
 	interval, err := stringToDuration(task.Interval)
 	if err != nil {
 		return err
 	}
 
 	syncSubcommand := &sync.Sync{}
-	syncSubcommand.SourceRepositoryLocation = taskset.Repository.URL
+	syncSubcommand.SourceRepositoryLocation = taskset.Repository.Location
 	if taskset.Repository.Passphrase != "" {
 		syncSubcommand.SourceRepositorySecret = []byte(taskset.Repository.Passphrase)
 		_ = syncSubcommand.SourceRepositorySecret
 	}
 
 	syncSubcommand.PeerRepositoryLocation = task.Peer
-	if task.Direction == "to" {
+	if task.Direction == SyncDirectionTo {
 		syncSubcommand.Direction = "to"
-	} else if task.Direction == "from" {
+	} else if task.Direction == SyncDirectionFrom {
 		syncSubcommand.Direction = "from"
-	} else if task.Direction == "with" || task.Direction == "" {
+	} else if task.Direction == SyncDirectionWith {
 		syncSubcommand.Direction = "with"
 	} else {
 		return fmt.Errorf("invalid sync direction: %s", task.Direction)
@@ -266,7 +266,7 @@ func (s *Scheduler) syncTask(taskset TaskSet, task SyncConfig) error {
 				time.Sleep(interval)
 			}
 
-			store, config, err := storage.Open(syncSubcommand.SourceRepositoryLocation)
+			store, config, err := storage.Open(map[string]string{"location": syncSubcommand.SourceRepositoryLocation})
 			if err != nil {
 				s.ctx.GetLogger().Error("sync: error opening storage: %s", err)
 				continue
@@ -304,14 +304,14 @@ func (s *Scheduler) cleanupTask(task CleanupConfig) error {
 	}
 
 	cleanupSubcommand := &cleanup.Cleanup{}
-	cleanupSubcommand.RepositoryLocation = task.Repository.URL
+	cleanupSubcommand.RepositoryLocation = task.Repository.Location
 	if task.Repository.Passphrase != "" {
 		cleanupSubcommand.RepositorySecret = []byte(task.Repository.Passphrase)
 		_ = cleanupSubcommand.RepositorySecret
 	}
 
 	rmSubcommand := &rm.Rm{}
-	rmSubcommand.RepositoryLocation = task.Repository.URL
+	rmSubcommand.RepositoryLocation = task.Repository.Location
 	if task.Repository.Passphrase != "" {
 		rmSubcommand.RepositorySecret = []byte(task.Repository.Passphrase)
 		_ = rmSubcommand.RepositorySecret
@@ -336,7 +336,7 @@ func (s *Scheduler) cleanupTask(task CleanupConfig) error {
 				time.Sleep(interval)
 			}
 
-			store, config, err := storage.Open(cleanupSubcommand.RepositoryLocation)
+			store, config, err := storage.Open(map[string]string{"location": cleanupSubcommand.RepositoryLocation})
 			if err != nil {
 				s.ctx.GetLogger().Error("Error opening storage: %s", err)
 				continue

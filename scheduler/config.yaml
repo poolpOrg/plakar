@@ -2,13 +2,13 @@ agent:
   cleanup:
     - interval: 10s
       repository:
-        url: /Users/gilles/.plakar
+        location: /Users/gilles/.plakar
       retention: 24h
 
   tasks:
     - name: system
       repository:
-        url: /Users/gilles/.plakar
+        location: /Users/gilles/.plakar
       
       backup:
         path: /private/etc

@@ -18,8 +18,10 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/PlakarKorp/plakar/objects"
@@ -37,26 +39,47 @@ func init() {
 	exporter.Register("s3", NewS3Exporter)
 }
 
-func connect(location *url.URL) (*minio.Client, error) {
+func connect(location *url.URL, useSsl bool, accessKeyID, secretAccessKey string) (*minio.Client, error) {
 	endpoint := location.Host
-	accessKeyID := location.User.Username()
-	secretAccessKey, _ := location.User.Password()
-	useSSL := false
 
 	// Initialize minio client object.
 	return minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure: useSSL,
+		Secure: useSsl,
 	})
 }
 
-func NewS3Exporter(location string) (exporter.Exporter, error) {
+func NewS3Exporter(config map[string]string) (exporter.Exporter, error) {
+	location := config["location"]
+	var accessKey string
+	if tmp, ok := config["access_key"]; !ok {
+		return nil, fmt.Errorf("missing access_key")
+	} else {
+		accessKey = tmp
+	}
+
+	var secretAccessKey string
+	if tmp, ok := config["secret_access_key"]; !ok {
+		return nil, fmt.Errorf("missing secret_access_key")
+	} else {
+		secretAccessKey = tmp
+	}
+
+	useSsl := true
+	if value, ok := config["use_ssl"]; ok {
+		tmp, err := strconv.ParseBool(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid use_ssl value")
+		}
+		useSsl = tmp
+	}
+
 	parsed, err := url.Parse(location)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := connect(parsed)
+	conn, err := connect(parsed, useSsl, accessKey, secretAccessKey)
 	if err != nil {
 		return nil, err
 	}
