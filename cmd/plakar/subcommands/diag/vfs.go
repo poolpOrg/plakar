@@ -1,4 +1,4 @@
-package info
+package diag
 
 import (
 	"fmt"
@@ -11,18 +11,18 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-type InfoVFS struct {
+type DiagVFS struct {
 	RepositoryLocation string
 	RepositorySecret   []byte
 
 	SnapshotPath string
 }
 
-func (cmd *InfoVFS) Name() string {
-	return "info_vfs"
+func (cmd *DiagVFS) Name() string {
+	return "diag_vfs"
 }
 
-func (cmd *InfoVFS) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	snap1, pathname, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotPath)
 	if err != nil {
 		return 1, err

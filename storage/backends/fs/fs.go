@@ -19,6 +19,7 @@ package fs
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -65,9 +66,24 @@ func (repo *Repository) Path(args ...string) string {
 
 func (repo *Repository) Create(config []byte) error {
 
-	err := os.Mkdir(repo.Path(), 0700)
+	dirfp, err := os.Open(repo.Location())
 	if err != nil {
-		return err
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		err = os.MkdirAll(repo.Location(), 0700)
+		if err != nil {
+			return err
+		}
+	} else {
+		defer dirfp.Close()
+		entries, err := dirfp.Readdir(1)
+		if err != nil && !errors.Is(err, io.EOF) {
+			return err
+		}
+		if len(entries) > 0 {
+			return fmt.Errorf("directory %s is not empty", repo.Location())
+		}
 	}
 
 	repo.packfiles = NewBuckets(repo.Path("packfiles"))

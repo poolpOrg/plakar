@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -41,23 +42,19 @@ type S3Importer struct {
 	scanDir     string
 
 	ino uint64
-
-	accessKey       string
-	secretAccessKey string
 }
 
 func init() {
 	importer.Register("s3", NewS3Importer)
 }
 
-func connect(location *url.URL, accessKeyID, secretAccessKey string) (*minio.Client, error) {
+func connect(location *url.URL, useSsl bool, accessKeyID, secretAccessKey string) (*minio.Client, error) {
 	endpoint := location.Host
-	useSSL := false
 
 	// Initialize minio client object.
 	return minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure: useSSL,
+		Secure: useSsl,
 	})
 }
 
@@ -78,12 +75,21 @@ func NewS3Importer(config map[string]string) (importer.Importer, error) {
 		secretAccessKey = tmp
 	}
 
+	useSsl := true
+	if value, ok := config["use_ssl"]; ok {
+		tmp, err := strconv.ParseBool(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid use_ssl value")
+		}
+		useSsl = tmp
+	}
+
 	parsed, err := url.Parse(location)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := connect(parsed, accessKey, secretAccessKey)
+	conn, err := connect(parsed, useSsl, accessKey, secretAccessKey)
 	if err != nil {
 		return nil, err
 	}
@@ -93,12 +99,10 @@ func NewS3Importer(config map[string]string) (importer.Importer, error) {
 	scanDir := filepath.Clean("/" + strings.Join(atoms[1:], "/"))
 
 	return &S3Importer{
-		bucket:          bucket,
-		scanDir:         scanDir,
-		minioClient:     conn,
-		host:            parsed.Host,
-		accessKey:       accessKey,
-		secretAccessKey: secretAccessKey,
+		bucket:      bucket,
+		scanDir:     scanDir,
+		minioClient: conn,
+		host:        parsed.Host,
 	}, nil
 }
 

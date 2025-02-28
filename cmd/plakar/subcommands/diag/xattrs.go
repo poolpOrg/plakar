@@ -1,4 +1,4 @@
-package info
+package diag
 
 import (
 	"fmt"
@@ -13,18 +13,18 @@ import (
 	"github.com/PlakarKorp/plakar/snapshot/vfs"
 )
 
-type InfoXattr struct {
+type DiagXattr struct {
 	RepositoryLocation string
 	RepositorySecret   []byte
 
 	SnapshotPath string
 }
 
-func (cmd *InfoXattr) Name() string {
-	return "info_xattr"
+func (cmd *DiagXattr) Name() string {
+	return "diag_xattr"
 }
 
-func (cmd *InfoXattr) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *DiagXattr) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	snap, pathname, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotPath)
 	if err != nil {
 		return 1, err

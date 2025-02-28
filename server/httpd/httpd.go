@@ -9,10 +9,10 @@ import (
 
 	"github.com/PlakarKorp/plakar/network"
 	"github.com/PlakarKorp/plakar/repository"
-	"github.com/gorilla/mux"
+	"github.com/PlakarKorp/plakar/storage"
 )
 
-var lrepository *repository.Repository
+var store storage.Store
 var lNoDelete bool
 
 func openRepository(w http.ResponseWriter, r *http.Request) {
@@ -22,37 +22,16 @@ func openRepository(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config := lrepository.Configuration()
-	serialized, err := config.ToBytes()
+	serializedConfig, err := store.Open()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	var resOpen network.ResOpen
-	resOpen.Configuration = serialized
+	resOpen.Configuration = serializedConfig
 	resOpen.Err = ""
 	if err := json.NewEncoder(w).Encode(resOpen); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func closeRepository(w http.ResponseWriter, r *http.Request) {
-	var reqClose network.ReqClose
-	if err := json.NewDecoder(r.Body).Decode(&reqClose); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if reqClose.Uuid != lrepository.Configuration().RepositoryID.String() {
-		http.Error(w, "UUID mismatch", http.StatusBadRequest)
-		return
-	}
-
-	var resClose network.ResClose
-	resClose.Err = ""
-	if err := json.NewEncoder(w).Encode(resClose); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -67,7 +46,7 @@ func getStates(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetStates network.ResGetStates
-	indexes, err := lrepository.Store().GetStates()
+	indexes, err := store.GetStates()
 	if err != nil {
 		resGetStates.Err = err.Error()
 	} else {
@@ -88,7 +67,7 @@ func putState(w http.ResponseWriter, r *http.Request) {
 
 	var resPutIndex network.ResPutState
 	data := reqPutState.Data
-	err := lrepository.Store().PutState(reqPutState.MAC, bytes.NewBuffer(data))
+	err := store.PutState(reqPutState.MAC, bytes.NewBuffer(data))
 	if err != nil {
 		resPutIndex.Err = err.Error()
 	}
@@ -106,7 +85,7 @@ func getState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetState network.ResGetState
-	rd, err := lrepository.Store().GetState(reqGetState.MAC)
+	rd, err := store.GetState(reqGetState.MAC)
 	if err != nil {
 		resGetState.Err = err.Error()
 	} else {
@@ -136,7 +115,7 @@ func deleteState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resDeleteState network.ResDeleteState
-	err := lrepository.Store().DeleteState(reqDeleteState.MAC)
+	err := store.DeleteState(reqDeleteState.MAC)
 	if err != nil {
 		resDeleteState.Err = err.Error()
 	}
@@ -155,7 +134,7 @@ func getPackfiles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetPackfiles network.ResGetPackfiles
-	packfiles, err := lrepository.Store().GetPackfiles()
+	packfiles, err := store.GetPackfiles()
 	if err != nil {
 		resGetPackfiles.Err = err.Error()
 	} else {
@@ -175,7 +154,7 @@ func putPackfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resPutPackfile network.ResPutPackfile
-	err := lrepository.Store().PutPackfile(reqPutPackfile.MAC, bytes.NewBuffer(reqPutPackfile.Data))
+	err := store.PutPackfile(reqPutPackfile.MAC, bytes.NewBuffer(reqPutPackfile.Data))
 	if err != nil {
 		resPutPackfile.Err = err.Error()
 	}
@@ -193,7 +172,7 @@ func getPackfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetPackfile network.ResGetPackfile
-	rd, err := lrepository.Store().GetPackfile(reqGetPackfile.MAC)
+	rd, err := store.GetPackfile(reqGetPackfile.MAC)
 	if err != nil {
 		resGetPackfile.Err = err.Error()
 	} else {
@@ -218,7 +197,7 @@ func GetPackfileBlob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetPackfileBlob network.ResGetPackfileBlob
-	rd, err := lrepository.Store().GetPackfileBlob(reqGetPackfileBlob.MAC, reqGetPackfileBlob.Offset, reqGetPackfileBlob.Length)
+	rd, err := store.GetPackfileBlob(reqGetPackfileBlob.MAC, reqGetPackfileBlob.Offset, reqGetPackfileBlob.Length)
 	if err != nil {
 		resGetPackfileBlob.Err = err.Error()
 	} else {
@@ -248,7 +227,7 @@ func deletePackfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resDeletePackfile network.ResDeletePackfile
-	err := lrepository.Store().DeletePackfile(reqDeletePackfile.MAC)
+	err := store.DeletePackfile(reqDeletePackfile.MAC)
 	if err != nil {
 		resDeletePackfile.Err = err.Error()
 	}
@@ -259,26 +238,21 @@ func deletePackfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func Server(repo *repository.Repository, addr string, noDelete bool) error {
-
 	lNoDelete = noDelete
+	store = repo.Store()
 
-	lrepository = repo
-	network.ProtocolRegister()
+	http.HandleFunc("GET /", openRepository)
 
-	r := mux.NewRouter()
-	r.HandleFunc("/", openRepository).Methods("GET")
-	r.HandleFunc("/", closeRepository).Methods("POST")
+	http.HandleFunc("GET /states", getStates)
+	http.HandleFunc("PUT /state", putState)
+	http.HandleFunc("GET /state", getState)
+	http.HandleFunc("DELETE /state", deleteState)
 
-	r.HandleFunc("/states", getStates).Methods("GET")
-	r.HandleFunc("/state", putState).Methods("PUT")
-	r.HandleFunc("/state", getState).Methods("GET")
-	r.HandleFunc("/state", deleteState).Methods("DELETE")
+	http.HandleFunc("GET /packfiles", getPackfiles)
+	http.HandleFunc("PUT /packfile", putPackfile)
+	http.HandleFunc("GET /packfile", getPackfile)
+	http.HandleFunc("GET /packfile/blob", GetPackfileBlob)
+	http.HandleFunc("DELETE /packfile", deletePackfile)
 
-	r.HandleFunc("/packfiles", getPackfiles).Methods("GET")
-	r.HandleFunc("/packfile", putPackfile).Methods("PUT")
-	r.HandleFunc("/packfile", getPackfile).Methods("GET")
-	r.HandleFunc("/packfile/blob", GetPackfileBlob).Methods("GET")
-	r.HandleFunc("/packfile", deletePackfile).Methods("DELETE")
-
-	return http.ListenAndServe(addr, r)
+	return http.ListenAndServe(addr, nil)
 }

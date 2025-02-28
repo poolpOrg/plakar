@@ -39,6 +39,7 @@ import (
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands/check"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands/cleanup"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands/clone"
+	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands/diag"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands/diff"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands/digest"
 	cmd_exec "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/exec"
@@ -92,7 +93,7 @@ func daemonize(argv []string) error {
 func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	var opt_foreground bool
 	var opt_stop bool
-	var opt_prometheus string
+	//var opt_prometheus string
 	var opt_tasks string
 	var opt_logfile string
 
@@ -104,7 +105,7 @@ func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, ar
 	}
 
 	flags.StringVar(&opt_tasks, "tasks", "", "tasks configuration file")
-	flags.StringVar(&opt_prometheus, "prometheus", "", "prometheus exporter interface, e.g. 127.0.0.1:9090")
+	//flags.StringVar(&opt_prometheus, "prometheus", "", "prometheus exporter interface, e.g. 127.0.0.1:9090")
 	flags.BoolVar(&opt_foreground, "foreground", false, "run in foreground")
 	flags.StringVar(&opt_logfile, "log", "", "log file")
 	flags.BoolVar(&opt_stop, "stop", false, "stop the agent")
@@ -147,7 +148,7 @@ func parse_cmd_agent(ctx *appcontext.AppContext, repo *repository.Repository, ar
 	}
 
 	return &Agent{
-		prometheus:  opt_prometheus,
+		//prometheus:  opt_prometheus,
 		socketPath:  filepath.Join(ctx.CacheDir, "agent.sock"),
 		schedConfig: schedConfig,
 	}, nil
@@ -424,6 +425,114 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 				var cmd struct {
 					Name       string
 					Subcommand info.InfoVFS
+				}
+				if err := msgpack.Unmarshal(request, &cmd); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to decode client request: %s\n", err)
+					return
+				}
+				subcommand = &cmd.Subcommand
+				repositoryLocation = cmd.Subcommand.RepositoryLocation
+				repositorySecret = cmd.Subcommand.RepositorySecret
+			case (&diag.DiagContentType{}).Name():
+				var cmd struct {
+					Name       string
+					Subcommand diag.DiagContentType
+				}
+				if err := msgpack.Unmarshal(request, &cmd); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to decode client request: %s\n", err)
+					return
+				}
+				subcommand = &cmd.Subcommand
+				repositoryLocation = cmd.Subcommand.RepositoryLocation
+				repositorySecret = cmd.Subcommand.RepositorySecret
+			case (&diag.DiagErrors{}).Name():
+				var cmd struct {
+					Name       string
+					Subcommand diag.DiagErrors
+				}
+				if err := msgpack.Unmarshal(request, &cmd); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to decode client request: %s\n", err)
+					return
+				}
+				subcommand = &cmd.Subcommand
+				repositoryLocation = cmd.Subcommand.RepositoryLocation
+				repositorySecret = cmd.Subcommand.RepositorySecret
+			case (&diag.DiagObject{}).Name():
+				var cmd struct {
+					Name       string
+					Subcommand diag.DiagObject
+				}
+				if err := msgpack.Unmarshal(request, &cmd); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to decode client request: %s\n", err)
+					return
+				}
+				subcommand = &cmd.Subcommand
+				repositoryLocation = cmd.Subcommand.RepositoryLocation
+				repositorySecret = cmd.Subcommand.RepositorySecret
+			case (&diag.DiagPackfile{}).Name():
+				var cmd struct {
+					Name       string
+					Subcommand diag.DiagPackfile
+				}
+				if err := msgpack.Unmarshal(request, &cmd); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to decode client request: %s\n", err)
+					return
+				}
+				subcommand = &cmd.Subcommand
+				repositoryLocation = cmd.Subcommand.RepositoryLocation
+				repositorySecret = cmd.Subcommand.RepositorySecret
+			case (&diag.DiagRepository{}).Name():
+				var cmd struct {
+					Name       string
+					Subcommand diag.DiagRepository
+				}
+				if err := msgpack.Unmarshal(request, &cmd); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to decode client request: %s\n", err)
+					return
+				}
+				subcommand = &cmd.Subcommand
+				repositoryLocation = cmd.Subcommand.RepositoryLocation
+				repositorySecret = cmd.Subcommand.RepositorySecret
+			case (&diag.DiagSnapshot{}).Name():
+				var cmd struct {
+					Name       string
+					Subcommand diag.DiagSnapshot
+				}
+				if err := msgpack.Unmarshal(request, &cmd); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to decode client request: %s\n", err)
+					return
+				}
+				subcommand = &cmd.Subcommand
+				repositoryLocation = cmd.Subcommand.RepositoryLocation
+				repositorySecret = cmd.Subcommand.RepositorySecret
+			case (&diag.DiagState{}).Name():
+				var cmd struct {
+					Name       string
+					Subcommand diag.DiagState
+				}
+				if err := msgpack.Unmarshal(request, &cmd); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to decode client request: %s\n", err)
+					return
+				}
+				subcommand = &cmd.Subcommand
+				repositoryLocation = cmd.Subcommand.RepositoryLocation
+				repositorySecret = cmd.Subcommand.RepositorySecret
+			case (&diag.DiagVFS{}).Name():
+				var cmd struct {
+					Name       string
+					Subcommand diag.DiagVFS
+				}
+				if err := msgpack.Unmarshal(request, &cmd); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to decode client request: %s\n", err)
+					return
+				}
+				subcommand = &cmd.Subcommand
+				repositoryLocation = cmd.Subcommand.RepositoryLocation
+				repositorySecret = cmd.Subcommand.RepositorySecret
+			case (&diag.DiagXattr{}).Name():
+				var cmd struct {
+					Name       string
+					Subcommand diag.DiagXattr
 				}
 				if err := msgpack.Unmarshal(request, &cmd); err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to decode client request: %s\n", err)

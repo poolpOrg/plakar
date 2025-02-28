@@ -24,6 +24,7 @@ import (
 	"github.com/PlakarKorp/plakar/repository"
 	"github.com/PlakarKorp/plakar/storage"
 	"github.com/PlakarKorp/plakar/versioning"
+	"github.com/beevik/ntp"
 	"github.com/denisbrodbeck/machineid"
 	"github.com/google/uuid"
 
@@ -37,9 +38,11 @@ import (
 	_ "github.com/PlakarKorp/plakar/snapshot/importer/fs"
 	_ "github.com/PlakarKorp/plakar/snapshot/importer/ftp"
 	_ "github.com/PlakarKorp/plakar/snapshot/importer/s3"
+	_ "github.com/PlakarKorp/plakar/snapshot/importer/sftp"
 
 	_ "github.com/PlakarKorp/plakar/snapshot/exporter/fs"
 	_ "github.com/PlakarKorp/plakar/snapshot/exporter/s3"
+	_ "github.com/PlakarKorp/plakar/snapshot/exporter/sftp"
 
 	_ "github.com/PlakarKorp/plakar/classifier/backend/noop"
 )
@@ -104,11 +107,13 @@ func entryPoint() int {
 	var opt_quiet bool
 	var opt_keyfile string
 	var opt_agentless bool
+	var opt_ntpserver string
 
 	flag.StringVar(&opt_configfile, "config", opt_configDefault, "configuration file")
 	flag.IntVar(&opt_cpuCount, "cpu", opt_cpuDefault, "limit the number of usable cores")
 	flag.StringVar(&opt_username, "username", opt_usernameDefault, "default username")
 	flag.StringVar(&opt_hostname, "hostname", opt_hostnameDefault, "default hostname")
+	flag.StringVar(&opt_ntpserver, "ntp", "ntp.plakar.io", "NTP server to use")
 	flag.StringVar(&opt_cpuProfile, "profile-cpu", "", "profile CPU usage")
 	flag.StringVar(&opt_memProfile, "profile-mem", "", "profile MEM usage")
 	flag.BoolVar(&opt_time, "time", false, "display command execution time")
@@ -130,6 +135,23 @@ func entryPoint() int {
 		fmt.Fprintf(flag.CommandLine.Output(), "\nFor more information on a command, use '%s help COMMAND'.\n", flag.CommandLine.Name())
 	}
 	flag.Parse()
+
+	if opt_ntpserver != "" {
+		response, err := ntp.Query(opt_ntpserver)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			return 1
+		}
+		err = response.Validate()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			return 1
+		}
+		if response.ClockOffset.Minutes() > 5 {
+			fmt.Fprintf(os.Stderr, "Error: NTP server offset is too high: %s\n", response.ClockOffset)
+			return 1
+		}
+	}
 
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
@@ -289,8 +311,8 @@ func entryPoint() int {
 
 	// create is a special case, it operates without a repository...
 	// but needs a repository location to store the new repository
-	if command == "create" {
-		repo, err := repository.Inexistant(ctx, storeConfig["location"])
+	if command == "create" || command == "server" {
+		repo, err := repository.Inexistant(ctx, storeConfig)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 			return 1
@@ -302,7 +324,7 @@ func entryPoint() int {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 			return 1
 		}
-		retval, err := cmd.Execute(ctx, nil)
+		retval, err := cmd.Execute(ctx, repo)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 		}
@@ -332,7 +354,8 @@ func entryPoint() int {
 
 	store, serializedConfig, err := storage.Open(storeConfig)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+		fmt.Fprintf(os.Stderr, "%s: failed to open the repository at %s: %s\n", flag.CommandLine.Name(), storeConfig["location"], err)
+		fmt.Fprintln(os.Stderr, "To specify an alternative repository, please use \"plakar at <location> <command>\".")
 		return 1
 	}
 

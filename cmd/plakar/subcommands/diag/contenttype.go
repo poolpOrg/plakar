@@ -1,4 +1,4 @@
-package info
+package diag
 
 import (
 	"fmt"
@@ -12,18 +12,18 @@ import (
 	"github.com/PlakarKorp/plakar/resources"
 )
 
-type InfoContentType struct {
+type DiagContentType struct {
 	RepositoryLocation string
 	RepositorySecret   []byte
 
 	SnapshotPath string
 }
 
-func (cmd *InfoContentType) Name() string {
-	return "info_contenttype"
+func (cmd *DiagContentType) Name() string {
+	return "diag_contenttype"
 }
 
-func (cmd *InfoContentType) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *DiagContentType) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	snap, pathname, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotPath)
 	if err != nil {
 		return 1, err

@@ -35,7 +35,6 @@ type Repository struct {
 }
 
 func init() {
-	network.ProtocolRegister()
 	storage.Register("http", NewRepository)
 }
 
@@ -87,21 +86,6 @@ func (repo *Repository) Open() ([]byte, error) {
 }
 
 func (repo *Repository) Close() error {
-	r, err := repo.sendRequest("POST", repo.Repository, "/", network.ReqClose{
-		Uuid: repo.config.RepositoryID.String(),
-	})
-	if err != nil {
-		return err
-	}
-
-	var resClose network.ResClose
-	if err := json.NewDecoder(r.Body).Decode(&resClose); err != nil {
-		return err
-	}
-	if resClose.Err != "" {
-		return fmt.Errorf("%s", resClose.Err)
-	}
-
 	return nil
 }
 

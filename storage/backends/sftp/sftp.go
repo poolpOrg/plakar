@@ -19,13 +19,13 @@ package sftp
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
-	"log"
 	"net"
 	"net/url"
 	"os"
+	"os/user"
 	"path"
 	"strings"
 
@@ -78,7 +78,7 @@ func defaultSigners() ([]ssh.Signer, error) {
 	}
 
 	for _, file := range keyFiles {
-		data, err := ioutil.ReadFile(file)
+		data, err := os.ReadFile(file)
 		if err != nil {
 			continue // Skip files that don't exist.
 		}
@@ -135,24 +135,32 @@ func connect(location string) (*sftp.Client, error) {
 	}
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatalf("failed to get home directory: %v", err)
+		return nil, fmt.Errorf("failed to get home directory: %v", err)
 	}
 	knownHostsPath := path.Join(homeDir, ".ssh", "known_hosts")
 
 	// Create the HostKeyCallback from the known_hosts file.
 	hostKeyCallback, err := knownhosts.New(knownHostsPath)
 	if err != nil {
-		log.Fatalf("could not create hostkeycallback function: %v", err)
+		return nil, fmt.Errorf("could not create hostkeycallback function: %v", err)
 	}
 
 	signers, err := defaultSigners()
 	if err != nil {
-		// Handle error appropriately.
-		panic(err)
+		return nil, err
+	}
+
+	username := parsed.User.Username()
+	if username == "" {
+		u, err := user.Current()
+		if err != nil {
+			return nil, err
+		}
+		username = u.Username
 	}
 
 	config := &ssh.ClientConfig{
-		User: parsed.User.Username(),
+		User: username,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signers...),
 		},
@@ -178,15 +186,24 @@ func (repo *Repository) Create(config []byte) error {
 	}
 	repo.client = client
 
-	err = client.Mkdir(repo.Path())
+	dirfp, err := client.ReadDir(repo.Path())
 	if err != nil {
-		return err
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		err = client.MkdirAll(repo.Path())
+		if err != nil {
+			return err
+		}
+		err = client.Chmod(repo.Path(), 0700)
+		if err != nil {
+			return err
+		}
+	} else {
+		if len(dirfp) > 0 {
+			return fmt.Errorf("directory %s is not empty", repo.Location())
+		}
 	}
-	err = client.Chmod(repo.Path(), 0700)
-	if err != nil {
-		return err
-	}
-
 	repo.packfiles = NewBuckets(client, repo.Path("packfiles"))
 	if err := repo.packfiles.Create(); err != nil {
 		return err

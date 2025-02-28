@@ -1,4 +1,4 @@
-.Dd February 17, 2025
+.Dd February 27, 2025
 .Dt PLAKAR-CONFIG 1
 .Os
 .Sh NAME
@@ -6,24 +6,85 @@
 .Nd Manages plakar configuration
 .Sh SYNOPSIS
 .Nm
-.Op Ar key Ns Oo = Ns Ar value
+.Op Cm remote | repository
 .Sh DESCRIPTION
 The
 .Nm
 command manages configuration of the Plakar software.
 .Pp
-Without arguments show all the configuration options currently set on the repository.
-With just
-.Ar key ,
-show the value defined for that key.
-Otherwise, set
-.Ar key
-to
-.Ar value .
+Without arguments show all the configuration options currently set on
+the repository.
 .Pp
-.Ar key
-is of the form
-.Sq Ar category Ns . Ns Ar option .
+The subcommands are as follows:
+.Bl -tag -width Ds
+.It Cm remote
+Manage remotes configuration.
+The arguments are as follows:
+.Bl -tag -width Ds
+.It Cm create Ar name
+Create a new remote identified by
+.Ar name .
+.It Cm set Ar name option value
+Set the
+.Ar option
+to
+.Ar value
+for the remote identified by
+.Ar name .
+Different remotes have different options available.
+.It Cm unset Ar name option
+Remove the
+.Ar option
+for the remote identified by
+.Ar name .
+.It Cm validate Ar name
+Attempt to validate the configuration for the remote
+.Ar name
+to ensure whether it is working.
+.El
+.It Cm repository No or Cm repo
+Manage repositories configuration.
+The arguments are as follows:
+.Bl -tag -width Ds
+.It Cm create Ar name
+Create a new repository configuration for
+.Ar name .
+.It Cm default Ar name
+Set the repository identified by
+.Ar name
+as the default repository used by
+.Xr plakar 1 .
+.It Cm set Ar name option value
+Set the
+.Ar option
+to
+.Ar value
+for the repository identified by
+.Ar name .
+.It Cm unset Ar name option
+Remove the
+.Ar option
+for the repository
+.Ar name .
+.It Cm validate Ar name
+Attempt to validate the configuration for the repository
+.Ar name
+to ensure whether the parameters are correct.
+.El
+.El
+.Sh EXAMPLES
+Create a new repository configuration:
+.Bd -literal -offset indent
+$ plakar config repository create nas
+$ plakar config repository set nas location sftp://mynas/var/plakar
+.Ed
+.Pp
+The set the
+.Dq nas
+repository as the default one:
+.Bd -literal -offset indent
+$ plakar config repository default nas
+.Ed
 .Sh DIAGNOSTICS
 .Ex -std
 .Sh SEE ALSO

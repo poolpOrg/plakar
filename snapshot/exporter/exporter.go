@@ -62,6 +62,8 @@ func NewExporter(config map[string]string) (Exporter, error) {
 			backendName = "s3"
 		} else if strings.HasPrefix(location, "fs://") {
 			backendName = "fs"
+		} else if strings.HasPrefix(location, "sftp://") {
+			backendName = "sftp"
 		} else {
 			if strings.Contains(location, "://") {
 				return nil, fmt.Errorf("unsupported importer protocol")

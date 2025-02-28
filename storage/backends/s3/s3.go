@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strconv"
 	"strings"
 
-	"github.com/PlakarKorp/plakar/network"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/storage"
 
@@ -39,12 +39,12 @@ type Repository struct {
 	minioClient *minio.Client
 	bucketName  string
 
+	useSsl          bool
 	accessKey       string
 	secretAccessKey string
 }
 
 func init() {
-	network.ProtocolRegister()
 	storage.Register("s3", NewRepository)
 }
 
@@ -63,10 +63,20 @@ func NewRepository(storeConfig map[string]string) (storage.Store, error) {
 		secretAccessKey = value
 	}
 
+	useSsl := true
+	if value, ok := storeConfig["use_ssl"]; ok {
+		tmp, err := strconv.ParseBool(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid use_ssl value")
+		}
+		useSsl = tmp
+	}
+
 	return &Repository{
 		location:        storeConfig["location"],
 		accessKey:       accessKey,
 		secretAccessKey: secretAccessKey,
+		useSsl:          useSsl,
 	}, nil
 }
 
@@ -76,7 +86,7 @@ func (repo *Repository) Location() string {
 
 func (repository *Repository) connect(location *url.URL) error {
 	endpoint := location.Host
-	useSSL := false
+	useSSL := repository.useSsl
 
 	// Initialize minio client object.
 	minioClient, err := minio.New(endpoint, &minio.Options{

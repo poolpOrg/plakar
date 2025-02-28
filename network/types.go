@@ -1,8 +1,6 @@
 package network
 
 import (
-	"encoding/gob"
-
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/google/uuid"
 )
@@ -29,14 +27,6 @@ type ReqOpen struct {
 type ResOpen struct {
 	Configuration []byte
 	Err           string
-}
-
-type ReqClose struct {
-	Uuid string
-}
-
-type ResClose struct {
-	Err string
 }
 
 // states
@@ -116,46 +106,4 @@ type ReqDeletePackfile struct {
 }
 type ResDeletePackfile struct {
 	Err string
-}
-
-func ProtocolRegister() {
-	gob.Register(Request{})
-
-	gob.Register(ReqCreate{})
-	gob.Register(ResCreate{})
-
-	gob.Register(ReqOpen{})
-	gob.Register(ResOpen{})
-
-	gob.Register(ReqClose{})
-	gob.Register(ResClose{})
-
-	// states
-	gob.Register(ReqGetStates{})
-	gob.Register(ResGetStates{})
-
-	gob.Register(ReqPutState{})
-	gob.Register(ResPutState{})
-
-	gob.Register(ReqGetState{})
-	gob.Register(ResGetState{})
-
-	gob.Register(ReqDeleteState{})
-	gob.Register(ResDeleteState{})
-
-	// packfiles
-	gob.Register(ReqGetPackfiles{})
-	gob.Register(ResGetPackfiles{})
-
-	gob.Register(ReqPutPackfile{})
-	gob.Register(ResPutPackfile{})
-
-	gob.Register(ReqGetPackfile{})
-	gob.Register(ResGetPackfile{})
-
-	gob.Register(ReqGetPackfileBlob{})
-	gob.Register(ResGetPackfileBlob{})
-
-	gob.Register(ReqDeletePackfile{})
-	gob.Register(ResDeletePackfile{})
 }

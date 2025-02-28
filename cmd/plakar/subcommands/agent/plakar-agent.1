@@ -6,7 +6,9 @@
 .Nd Run the Plakar agent
 .Sh SYNOPSIS
 .Nm
-.Op Fl prometheus Ar address
+.Op Fl foreground
+.Op Fl log Ar filename
+.Op Fl stop
 .Sh DESCRIPTION
 The
 .Nm
@@ -18,12 +20,14 @@ continues running indefinitely.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
-.It Fl prometheus Ar address
-Expose a prometheus server at
-.Ar address .
-Metrics are available at the
-.Pa /metrics
-endpoint.
+.It Fl foreground
+Do not daemonize agent,
+run in foreground.
+.It Fl log Ar filename
+Redirect all output to
+.Ar filename .
+.It Fl stop
+Terminate an agent running in the background.
 .El
 .Sh DIAGNOSTICS
 .Ex -std

@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package info
+package diag
 
 import (
 	"flag"
@@ -31,7 +31,7 @@ func init() {
 
 func parse_cmd_diag(ctx *appcontext.AppContext, repo *repository.Repository, args []string) (subcommands.Subcommand, error) {
 	if len(args) == 0 {
-		return &InfoRepository{
+		return &DiagRepository{
 			RepositoryLocation: repo.Location(),
 			RepositorySecret:   ctx.GetSecret(),
 		}, nil
@@ -55,7 +55,7 @@ func parse_cmd_diag(ctx *appcontext.AppContext, repo *repository.Repository, arg
 		if len(flags.Args()) < 2 {
 			return nil, fmt.Errorf("usage: %s snapshot SNAPSHOT", flags.Name())
 		}
-		return &InfoSnapshot{
+		return &DiagSnapshot{
 			RepositoryLocation: repo.Location(),
 			RepositorySecret:   ctx.GetSecret(),
 			SnapshotID:         flags.Args()[1],
@@ -64,19 +64,19 @@ func parse_cmd_diag(ctx *appcontext.AppContext, repo *repository.Repository, arg
 		if len(flags.Args()) < 2 {
 			return nil, fmt.Errorf("usage: %s errors SNAPSHOT", flags.Name())
 		}
-		return &InfoErrors{
+		return &DiagErrors{
 			RepositoryLocation: repo.Location(),
 			RepositorySecret:   ctx.GetSecret(),
 			SnapshotID:         flags.Args()[1],
 		}, nil
 	case "state":
-		return &InfoState{
+		return &DiagState{
 			RepositoryLocation: repo.Location(),
 			RepositorySecret:   ctx.GetSecret(),
 			Args:               flags.Args()[1:],
 		}, nil
 	case "packfile":
-		return &InfoPackfile{
+		return &DiagPackfile{
 			RepositoryLocation: repo.Location(),
 			RepositorySecret:   ctx.GetSecret(),
 			Args:               flags.Args()[1:],
@@ -85,7 +85,7 @@ func parse_cmd_diag(ctx *appcontext.AppContext, repo *repository.Repository, arg
 		if len(flags.Args()) < 2 {
 			return nil, fmt.Errorf("usage: %s object OBJECT", flags.Name())
 		}
-		return &InfoObject{
+		return &DiagObject{
 			RepositoryLocation: repo.Location(),
 			RepositorySecret:   ctx.GetSecret(),
 			ObjectID:           flags.Args()[1],
@@ -94,7 +94,7 @@ func parse_cmd_diag(ctx *appcontext.AppContext, repo *repository.Repository, arg
 		if len(flags.Args()) < 2 {
 			return nil, fmt.Errorf("usage: %s vfs SNAPSHOT[:PATH]", flags.Name())
 		}
-		return &InfoVFS{
+		return &DiagVFS{
 			RepositoryLocation: repo.Location(),
 			RepositorySecret:   ctx.GetSecret(),
 			SnapshotPath:       flags.Args()[1],
@@ -103,7 +103,7 @@ func parse_cmd_diag(ctx *appcontext.AppContext, repo *repository.Repository, arg
 		if len(flags.Args()) < 2 {
 			return nil, fmt.Errorf("usage: %s xattr SNAPSHOT[:PATH]", flags.Name())
 		}
-		return &InfoXattr{
+		return &DiagXattr{
 			RepositoryLocation: repo.Location(),
 			RepositorySecret:   ctx.GetSecret(),
 			SnapshotPath:       flags.Args()[1],
@@ -112,7 +112,7 @@ func parse_cmd_diag(ctx *appcontext.AppContext, repo *repository.Repository, arg
 		if len(flags.Args()) < 2 {
 			return nil, fmt.Errorf("usage: %s contettype SNAPSHOT[:PATH]", flags.Name())
 		}
-		return &InfoContentType{
+		return &DiagContentType{
 			RepositoryLocation: repo.Location(),
 			RepositorySecret:   ctx.GetSecret(),
 			SnapshotPath:       flags.Args()[1],

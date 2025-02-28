@@ -1,4 +1,4 @@
-package info
+package diag
 
 import (
 	"encoding/hex"
@@ -11,18 +11,18 @@ import (
 	"github.com/PlakarKorp/plakar/resources"
 )
 
-type InfoObject struct {
+type DiagObject struct {
 	RepositoryLocation string
 	RepositorySecret   []byte
 
 	ObjectID string
 }
 
-func (cmd *InfoObject) Name() string {
-	return "info_object"
+func (cmd *DiagObject) Name() string {
+	return "diag_object"
 }
 
-func (cmd *InfoObject) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *DiagObject) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	if len(cmd.ObjectID) != 64 {
 		return 1, fmt.Errorf("invalid object hash: %s", cmd.ObjectID)
 	}

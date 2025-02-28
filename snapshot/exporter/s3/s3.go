@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/PlakarKorp/plakar/objects"
@@ -32,23 +33,19 @@ import (
 type S3Exporter struct {
 	minioClient *minio.Client
 	rootDir     string
-
-	accessKeyID     string
-	secretAccessKey string
 }
 
 func init() {
 	exporter.Register("s3", NewS3Exporter)
 }
 
-func connect(location *url.URL, accessKeyID, secretAccessKey string) (*minio.Client, error) {
+func connect(location *url.URL, useSsl bool, accessKeyID, secretAccessKey string) (*minio.Client, error) {
 	endpoint := location.Host
-	useSSL := false
 
 	// Initialize minio client object.
 	return minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure: useSSL,
+		Secure: useSsl,
 	})
 }
 
@@ -68,12 +65,21 @@ func NewS3Exporter(config map[string]string) (exporter.Exporter, error) {
 		secretAccessKey = tmp
 	}
 
+	useSsl := true
+	if value, ok := config["use_ssl"]; ok {
+		tmp, err := strconv.ParseBool(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid use_ssl value")
+		}
+		useSsl = tmp
+	}
+
 	parsed, err := url.Parse(location)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := connect(parsed, accessKey, secretAccessKey)
+	conn, err := connect(parsed, useSsl, accessKey, secretAccessKey)
 	if err != nil {
 		return nil, err
 	}

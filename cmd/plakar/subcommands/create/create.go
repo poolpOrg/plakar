@@ -36,7 +36,6 @@ import (
 	"github.com/PlakarKorp/plakar/resources"
 	"github.com/PlakarKorp/plakar/storage"
 	"github.com/PlakarKorp/plakar/versioning"
-	passwordvalidator "github.com/wagslane/go-password-validator"
 )
 
 func init() {
@@ -102,6 +101,11 @@ func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	}
 	storageConfiguration.Hashing = *hashingConfiguration
 
+	minEntropBits := 80.
+	if cmd.AllowWeak {
+		minEntropBits = 0.
+	}
+
 	var hasher hash.Hash
 	if !cmd.NoEncryption {
 		storageConfiguration.Encryption = encryption.NewDefaultConfiguration()
@@ -114,7 +118,7 @@ func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 				passphrase = []byte(envPassphrase)
 			} else {
 				for attempt := 0; attempt < 3; attempt++ {
-					tmp, err := utils.GetPassphraseConfirm("repository")
+					tmp, err := utils.GetPassphraseConfirm("repository", minEntropBits)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "%s\n", err)
 						continue
@@ -129,15 +133,6 @@ func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 
 		if len(passphrase) == 0 {
 			return 1, fmt.Errorf("can't encrypt the repository with an empty passphrase")
-		}
-
-		if !cmd.AllowWeak {
-			// keepass considers < 80 bits as weak
-			minEntropBits := 80.
-			err := passwordvalidator.Validate(string(passphrase), minEntropBits)
-			if err != nil {
-				return 1, fmt.Errorf("passphrase is too weak: %s", err)
-			}
 		}
 
 		key, err := encryption.DeriveKey(storageConfiguration.Encryption.KDFParams, passphrase)
@@ -177,7 +172,19 @@ func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		}
 		repo.Close()
 	} else {
-		repo, err := storage.Create(map[string]string{"location": cmd.Location}, wrappedConfig)
+		storeConfig := map[string]string{"location": cmd.Location}
+		if strings.HasPrefix(cmd.Location, "@") {
+			remote, ok := ctx.Config.GetRepository(cmd.Location[1:])
+			if !ok {
+				return 1, fmt.Errorf("could not resolve repository: %s", cmd.Location)
+			}
+			if _, ok := remote["location"]; !ok {
+				return 1, fmt.Errorf("could not resolve repository location: %s", cmd.Location)
+			} else {
+				storeConfig = remote
+			}
+		}
+		repo, err := storage.Create(storeConfig, wrappedConfig)
 		if err != nil {
 			return 1, err
 		}

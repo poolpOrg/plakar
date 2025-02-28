@@ -1,4 +1,4 @@
-package info
+package diag
 
 import (
 	"fmt"
@@ -8,18 +8,18 @@ import (
 	"github.com/PlakarKorp/plakar/repository"
 )
 
-type InfoErrors struct {
+type DiagErrors struct {
 	RepositoryLocation string
 	RepositorySecret   []byte
 
 	SnapshotID string
 }
 
-func (cmd *InfoErrors) Name() string {
-	return "info_errors"
+func (cmd *DiagErrors) Name() string {
+	return "diag_errors"
 }
 
-func (cmd *InfoErrors) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *DiagErrors) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	snap, pathname, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotID)
 	if err != nil {
 		return 1, err

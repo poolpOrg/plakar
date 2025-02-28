@@ -26,7 +26,7 @@ func TestExecuteCmdCreateDefaultWithHashing(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistant(ctx, tmpRepoDirRoot+"/repo")
+	repo, err := repository.Inexistant(ctx, map[string]string{"location": tmpRepoDirRoot+"/repo"})
 	require.NoError(t, err)
 
 	// override the homedir to avoid having test overwriting existing home configuration
@@ -54,7 +54,7 @@ func TestExecuteCmdCreateDefaultWithoutCompression(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistant(ctx, tmpRepoDirRoot+"/repo")
+	repo, err := repository.Inexistant(ctx, map[string]string{"location": tmpRepoDirRoot+"/repo"})
 	require.NoError(t, err)
 	// override the homedir to avoid having test overwriting existing home configuration
 	ctx.HomeDir = tmpRepoDirRoot
@@ -81,7 +81,7 @@ func TestExecuteCmdCreateDefaultWithoutEncryption(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistant(ctx, tmpRepoDirRoot+"/repo")
+	repo, err := repository.Inexistant(ctx, map[string]string{"location": tmpRepoDirRoot+"/repo"})
 	require.NoError(t, err)
 	// override the homedir to avoid having test overwriting existing home configuration
 	ctx.HomeDir = tmpRepoDirRoot
@@ -122,7 +122,7 @@ func TestExecuteCmdCreateDefaultWeakPassword(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistant(ctx, tmpRepoDirRoot+"/repo")
+	repo, err := repository.Inexistant(ctx, map[string]string{"location": tmpRepoDirRoot+"/repo"})
 	require.NoError(t, err)
 	// override the homedir to avoid having test overwriting existing home configuration
 	ctx.HomeDir = tmpRepoDirRoot
@@ -132,7 +132,7 @@ func TestExecuteCmdCreateDefaultWeakPassword(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
-	input := "azerty\nazerty\n"
+	input := "azerty\nazerty\nazerty\n"
 	_, err = pty.WriteString(input)
 	require.NoError(t, err)
 
@@ -168,7 +168,7 @@ func TestExecuteCmdCreateDefaultWithKeyfile(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistant(ctx, tmpRepoDirRoot+"/repo")
+	repo, err := repository.Inexistant(ctx, map[string]string{"location": tmpRepoDirRoot+"/repo"})
 	require.NoError(t, err)
 	// override the homedir to avoid having test overwriting existing home configuration
 	ctx.HomeDir = tmpRepoDirRoot
@@ -196,7 +196,7 @@ func TestExecuteCmdCreateDefaultWithEnvPassphrase(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistant(ctx, tmpRepoDirRoot+"/repo")
+	repo, err := repository.Inexistant(ctx, map[string]string{"location": tmpRepoDirRoot+"/repo"})
 	require.NoError(t, err)
 	// override the homedir to avoid having test overwriting existing home configuration
 	ctx.HomeDir = tmpRepoDirRoot

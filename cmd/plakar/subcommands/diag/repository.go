@@ -1,4 +1,4 @@
-package info
+package diag
 
 import (
 	"fmt"
@@ -10,16 +10,16 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-type InfoRepository struct {
+type DiagRepository struct {
 	RepositoryLocation string
 	RepositorySecret   []byte
 }
 
-func (cmd *InfoRepository) Name() string {
-	return "info_repository"
+func (cmd *DiagRepository) Name() string {
+	return "diag_repository"
 }
 
-func (cmd *InfoRepository) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *DiagRepository) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 
 	fmt.Fprintln(ctx.Stdout, "Version:", repo.Configuration().Version)
 	fmt.Fprintln(ctx.Stdout, "Timestamp:", repo.Configuration().Timestamp)

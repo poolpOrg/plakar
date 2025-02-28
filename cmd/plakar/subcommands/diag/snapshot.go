@@ -1,4 +1,4 @@
-package info
+package diag
 
 import (
 	"encoding/base64"
@@ -14,18 +14,18 @@ import (
 	"github.com/google/uuid"
 )
 
-type InfoSnapshot struct {
+type DiagSnapshot struct {
 	RepositoryLocation string
 	RepositorySecret   []byte
 
 	SnapshotID string
 }
 
-func (cmd *InfoSnapshot) Name() string {
-	return "info_snapshot"
+func (cmd *DiagSnapshot) Name() string {
+	return "diag_snapshot"
 }
 
-func (cmd *InfoSnapshot) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *DiagSnapshot) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	snap, _, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotID)
 	if err != nil {
 		return 1, err

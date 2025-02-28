@@ -1,4 +1,4 @@
-package info
+package diag
 
 import (
 	"encoding/hex"
@@ -9,18 +9,18 @@ import (
 	"github.com/PlakarKorp/plakar/repository"
 )
 
-type InfoPackfile struct {
+type DiagPackfile struct {
 	RepositoryLocation string
 	RepositorySecret   []byte
 
 	Args []string
 }
 
-func (cmd *InfoPackfile) Name() string {
-	return "info_packfile"
+func (cmd *DiagPackfile) Name() string {
+	return "diag_packfile"
 }
 
-func (cmd *InfoPackfile) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *DiagPackfile) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	if len(cmd.Args) == 0 {
 		packfiles, err := repo.GetPackfiles()
 		if err != nil {

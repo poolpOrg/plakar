@@ -1,4 +1,4 @@
-package info
+package diag
 
 import (
 	"crypto/rand"
@@ -13,18 +13,18 @@ import (
 	"github.com/PlakarKorp/plakar/resources"
 )
 
-type InfoState struct {
+type DiagState struct {
 	RepositoryLocation string
 	RepositorySecret   []byte
 
 	Args []string
 }
 
-func (cmd *InfoState) Name() string {
-	return "info_state"
+func (cmd *DiagState) Name() string {
+	return "diag_state"
 }
 
-func (cmd *InfoState) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	if len(cmd.Args) == 0 {
 		states, err := repo.GetStates()
 		if err != nil {

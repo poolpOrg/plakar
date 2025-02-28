@@ -62,7 +62,9 @@ type BTree[K any, P any, V any] struct {
 
 // New returns a new, empty tree.
 func New[K any, P any, V any](store Storer[K, P, V], compare func(K, K) int, order int) (*BTree[K, P, V], error) {
-	root := Node[K, P, V]{}
+	root := Node[K, P, V]{
+		Version: versioning.FromString(NODE_VERSION),
+	}
 	ptr, err := store.Put(&root)
 	if err != nil {
 		return nil, err
@@ -99,7 +101,7 @@ func Deserialize[K, P, V any](rd io.Reader, store Storer[K, P, V], compare func(
 
 func newNodeFrom[K, P, V any](keys []K, pointers []P, values []V) *Node[K, P, V] {
 	node := &Node[K, P, V]{
-		Version:  versioning.FromString(BTREE_VERSION),
+		Version:  versioning.FromString(NODE_VERSION),
 		Keys:     make([]K, len(keys)),
 		Pointers: make([]P, len(pointers)),
 		Values:   make([]V, len(values)),
@@ -277,7 +279,7 @@ func (b *BTree[K, P, V]) insertUpwards(key K, ptr P, path []P) error {
 
 	// reached the root, growing the tree
 	newroot := &Node[K, P, V]{
-		Version:  versioning.FromString(BTREE_VERSION),
+		Version:  versioning.FromString(NODE_VERSION),
 		Keys:     []K{key},
 		Pointers: []P{b.Root, ptr},
 	}

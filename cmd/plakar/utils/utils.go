@@ -29,6 +29,7 @@ import (
 	"syscall"
 	"time"
 
+	passwordvalidator "github.com/wagslane/go-password-validator"
 	"golang.org/x/mod/semver"
 	"golang.org/x/term"
 	"golang.org/x/tools/blog/atom"
@@ -158,12 +159,18 @@ func GetPassphrase(prefix string) ([]byte, error) {
 	return passphrase, nil
 }
 
-func GetPassphraseConfirm(prefix string) ([]byte, error) {
+func GetPassphraseConfirm(prefix string, minEntropyBits float64) ([]byte, error) {
 	fmt.Fprintf(os.Stderr, "%s passphrase: ", prefix)
 	passphrase1, err := term.ReadPassword(int(syscall.Stdin))
 	fmt.Fprintf(os.Stderr, "\n")
 	if err != nil {
 		return nil, err
+	}
+
+	// keepass considers < 80 bits as weak
+	err = passwordvalidator.Validate(string(passphrase1), minEntropyBits)
+	if err != nil {
+		return nil, fmt.Errorf("passphrase is too weak: %s", err)
 	}
 
 	fmt.Fprintf(os.Stderr, "%s passphrase (confirm): ", prefix)

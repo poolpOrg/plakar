@@ -25,6 +25,7 @@ import (
 
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/pkg/sftp"
+	"golang.org/x/sync/errgroup"
 )
 
 type Buckets struct {
@@ -40,18 +41,23 @@ func NewBuckets(sftpClient *sftp.Client, path string) Buckets {
 }
 
 func (buckets *Buckets) Create() error {
+	var g errgroup.Group
 
 	for i := 0; i < 256; i++ {
-		err := buckets.client.MkdirAll(path.Join(buckets.path, fmt.Sprintf("%02x", i)))
-		if err != nil {
-			return err
-		}
-		if err := buckets.client.Chmod(path.Join(buckets.path, fmt.Sprintf("%02x", i)), 0755); err != nil {
-			return err
-		}
+		i := i // capture the current value of i
+		g.Go(func() error {
+			dir := path.Join(buckets.path, fmt.Sprintf("%02x", i))
+			if err := buckets.client.MkdirAll(dir); err != nil {
+				return err
+			}
+			if err := buckets.client.Chmod(dir, 0755); err != nil {
+				return err
+			}
+			return nil
+		})
 	}
 
-	return nil
+	return g.Wait()
 }
 
 func (buckets *Buckets) List() ([]objects.MAC, error) {
