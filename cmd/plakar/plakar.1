@@ -1,0 +1,55 @@
+.Dd February 28, 2025
+.Dt PLAKAR-LS 1
+.Os
+.Sh NAME
+.Nm plakar
+.Nd effortless backups
+.Sh SYNOPSIS
+.Nm
+.Op Fl config Ar path
+.Op Fl cpu Ar number
+.Op Fl hostname Ar name
+.Op Fl keyfile Ar path
+.Op Fl no-agent
+.Op Fl quiet
+.Op Fl trace Ar what
+.Op Fl username Ar name
+.Op Cm at Ar repository
+.Ar subcommand ...
+.Sh DESCRIPTION
+.Nm
+is a tool to create distributed, versioned backups with compression,
+encryption and data deduplication.
+.Pp
+The following options are available:
+.Bl -tag -width Ds
+.It Fl config Ar path
+Use the configuration at
+.Ar path .
+.It Fl cpu Ar number
+Limit the number of parallelism that
+.Nm
+uses to
+.Ar number .
+By default it's the number of online CPUs.
+.It Fl hostname Ar name
+Change the hostname used for backups.
+Defaults to the current hostname.
+.It Fl keyfile Ar path
+Use the passphrase fro the key file at
+.Ar path
+instead of prompting to unlock.
+.It Fl no-agent
+Run without attempting to connect to the agent.
+.It Fl quiet
+Disable all output except for erors.
+.It Fl trace Ar what
+Display trace logs.
+.Ar what
+is a comma-separated series of keywords to enable the trace logs for
+different subsystems:
+.Cm all , trace , repository , snapshot No and Cm server .
+.It Fl username Ar name
+Change the username used for backups.
+Defaults to the current user name.
+.El
