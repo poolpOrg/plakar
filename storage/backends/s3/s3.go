@@ -276,26 +276,13 @@ func (repository *Repository) GetPackfile(mac objects.MAC) (io.Reader, error) {
 
 func (repository *Repository) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (io.Reader, error) {
 	opts := minio.GetObjectOptions{}
-	opts.SetRange(int64(offset), int64(offset+uint64(length)))
 	object, err := repository.minioClient.GetObject(context.Background(), repository.bucketName, fmt.Sprintf("packfiles/%02x/%016x", mac[0], mac), opts)
 	if err != nil {
 		return nil, err
 	}
-	stat, err := object.Stat()
-	if err != nil {
-		return nil, err
-	}
-
-	if stat.Size < int64(offset+uint64(length)) {
-		return nil, fmt.Errorf("invalid range")
-	}
-
-	if _, err := object.Seek(int64(offset), io.SeekStart); err != nil {
-		return nil, err
-	}
 
 	buffer := make([]byte, length)
-	if nbytes, err := object.Read(buffer); err != nil {
+	if nbytes, err := object.ReadAt(buffer, int64(offset)); err != nil {
 		return nil, err
 	} else if nbytes != int(length) {
 		return nil, fmt.Errorf("short read")
