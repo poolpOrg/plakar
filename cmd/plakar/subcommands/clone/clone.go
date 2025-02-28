@@ -17,17 +17,22 @@
 package clone
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"hash"
+	"io"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
+	"github.com/PlakarKorp/plakar/hashing"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/repository"
+	"github.com/PlakarKorp/plakar/resources"
 	"github.com/PlakarKorp/plakar/storage"
-	"github.com/google/uuid"
 )
 
 func init() {
@@ -70,7 +75,6 @@ func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 	sourceStore := repo.Store()
 
 	configuration := repo.Configuration()
-	configuration.RepositoryID = uuid.Must(uuid.NewRandom())
 
 	serializedConfig, err := configuration.ToBytes()
 	if err != nil {
@@ -78,7 +82,37 @@ func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		return 1, err
 	}
 
-	cloneStore, err := storage.Create(map[string]string{"location": cmd.Dest}, serializedConfig)
+	var hasher hash.Hash
+	if configuration.Encryption != nil {
+		hasher = hashing.GetMACHasher(storage.DEFAULT_HASHING_ALGORITHM, ctx.GetSecret())
+	} else {
+		hasher = hashing.GetHasher(storage.DEFAULT_HASHING_ALGORITHM)
+	}
+
+	wrappedSerializedConfigRd, err := storage.Serialize(hasher,
+		resources.RT_CONFIG, repo.Configuration().Version, bytes.NewReader(serializedConfig))
+	if err != nil {
+		return 1, err
+	}
+	wrappedSerializedConfig, err := io.ReadAll(wrappedSerializedConfigRd)
+	if err != nil {
+		return 1, err
+	}
+
+	storeConfig := map[string]string{"location": cmd.Dest}
+	if strings.HasPrefix(cmd.Dest, "@") {
+		remote, ok := ctx.Config.GetRepository(cmd.Dest[1:])
+		if !ok {
+			return 1, fmt.Errorf("could not resolve repository: %s", cmd.Dest)
+		}
+		if _, ok := remote["location"]; !ok {
+			return 1, fmt.Errorf("could not resolve repository location: %s", cmd.Dest)
+		} else {
+			storeConfig = remote
+		}
+	}
+
+	cloneStore, err := storage.Create(storeConfig, wrappedSerializedConfig)
 	if err != nil {
 		return 1, fmt.Errorf("could not create repository: %w", err)
 	}
