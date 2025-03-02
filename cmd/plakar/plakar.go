@@ -120,7 +120,7 @@ func entryPoint() int {
 	flag.BoolVar(&opt_agentless, "no-agent", false, "run without agent")
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [at REPOSITORY] [OPTIONS] COMMAND [COMMAND_OPTIONS]...\n", flag.CommandLine.Name())
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [OPTIONS] [at REPOSITORY] COMMAND [COMMAND_OPTIONS]...\n", flag.CommandLine.Name())
 		fmt.Fprintf(flag.CommandLine.Output(), "\nBy default, the repository is $PLAKAR_REPOSITORY or $HOME/.plakar.\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nOPTIONS:\n")
 		flag.PrintDefaults()
