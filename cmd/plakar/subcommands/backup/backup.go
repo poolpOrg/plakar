@@ -111,6 +111,7 @@ func parse_cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, a
 		Tags:               opt_tags,
 		Excludes:           excludes,
 		Quiet:              opt_quiet,
+		CWD:                ctx.CWD,
 		Path:               flags.Arg(0),
 		OptCheck:           opt_check,
 	}, nil
@@ -126,6 +127,7 @@ type Backup struct {
 	Excludes    []glob.Glob
 	Silent      bool
 	Quiet       bool
+	CWD         string
 	Path        string
 	OptCheck    bool
 }
@@ -160,7 +162,7 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		Excludes:       cmd.Excludes,
 	}
 
-	scanDir := ctx.CWD
+	scanDir := cmd.CWD
 	if cmd.Path != "" {
 		scanDir = cmd.Path
 	}
@@ -183,7 +185,7 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	imp, err := importer.NewImporter(importerConfig)
 	if err != nil {
 		if !filepath.IsAbs(scanDir) {
-			scanDir = filepath.Join(ctx.CWD, scanDir)
+			scanDir = filepath.Join(cmd.CWD, scanDir)
 		}
 		imp, err = importer.NewImporter(map[string]string{"location": "fs://" + scanDir})
 		if err != nil {
