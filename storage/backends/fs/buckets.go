@@ -97,11 +97,7 @@ func (buckets *Buckets) Path(mac objects.MAC) string {
 }
 
 func (buckets *Buckets) Get(mac objects.MAC) (io.Reader, error) {
-	fp, err := os.Open(buckets.Path(mac))
-	if err != nil {
-		return nil, err
-	}
-	return ClosingReader(fp)
+	return os.Open(buckets.Path(mac))
 }
 
 func (buckets *Buckets) GetBlob(mac objects.MAC, offset uint64, length uint32) (io.Reader, error) {
