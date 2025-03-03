@@ -7,18 +7,19 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl hashing Ar algorithm
-.Ar snapshotID Ns No : Ns Ar filepath Op ...
+.Ar snapshotID Ns Op : Ns Ar path
+.Op ...
 .Sh DESCRIPTION
 The
 .Nm
 command computes and displays digests for specified
-.Ar filepath
+.Ar path
 in a the given
 .Ar snapshotID .
 Multiple
 .Ar snapshotID
 and
-.Ar filepath
+.Ar path
 may be given.
 By default, the command computes the digest by reading the file
 contents.
