@@ -1,4 +1,11 @@
-Copyright (c) 2021 Gilles Chehade <gilles@poolp.org>
+Copyright (c) 2021-present Plakar SAS <hello@plakar.io>
+
+Portions of the Plakar software are licensed as follows:
+
+* If you are accessing or using any component of the software that resides under an "ui/" or "ee/" directory, then you are deemed to be using our “Enterprise Edition” of the software and you understand and agree that the software is not licensed under the "ISC License" license as set forth below but instead, all the software you access is licensed under the license defined in "ui/LICENSE", unless (a) you or the company you represent has signed an alternative agreement referencing this code, then such signed agreement applies or (b) you are using the software in connection with a subscription or a license, then the terms of the agreement relevant to our offering which you have assented to apply and the software licenses included in that agreement shall apply.
+* If (a) you are not accessing or using the software that resides under an “ui/” or "ee/" directory and therefore you are only accessing or using our “Community Edition” of the Software and (b) you have no registered account on our offering, then we are providing you the software under the "ISC License license as set forth below.
+
+ISC License
 
 Permission to use, copy, modify, and distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
