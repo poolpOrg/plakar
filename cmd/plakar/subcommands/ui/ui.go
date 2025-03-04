@@ -89,7 +89,7 @@ func (cmd *Ui) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 		ui_opts.Token = uuid.NewString()
 	}
 
-	err := v2.Ui(repo, cmd.Addr, &ui_opts)
+	err := v2.Ui(ctx, repo, cmd.Addr, &ui_opts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ui: %s\n", err)
 		return 1, err

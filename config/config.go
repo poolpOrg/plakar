@@ -11,9 +11,9 @@ import (
 
 type Config struct {
 	pathname          string
-	DefaultRepository string                      `yaml:"default-repo"`
-	Repositories      map[string]RepositoryConfig `yaml:"repositories"`
-	Remotes           map[string]RemoteConfig     `yaml:"remotes"`
+	DefaultRepository string                      `yaml:"default-repo" json:"default_repository"`
+	Repositories      map[string]RepositoryConfig `yaml:"repositories" json:"repositories"`
+	Remotes           map[string]RemoteConfig     `yaml:"remotes" json:"remotes"`
 }
 
 type RepositoryConfig map[string]string

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/repository"
 	"github.com/PlakarKorp/plakar/snapshot"
 	"github.com/PlakarKorp/plakar/storage"
@@ -100,7 +101,7 @@ func TokenAuthMiddleware(token string) func(http.Handler) http.Handler {
 	}
 }
 
-func SetupRoutes(server *http.ServeMux, repo *repository.Repository, token string) {
+func SetupRoutes(ctx *appcontext.AppContext, server *http.ServeMux, repo *repository.Repository, token string) {
 	lstore = repo.Store()
 	lconfig = repo.Configuration()
 	lrepository = repo
@@ -116,6 +117,8 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, token strin
 			Message:  "API endpoint not found",
 		}
 	}))
+
+	server.Handle("GET /api/settings", authToken(JSONAPIView(settingsView(ctx))))
 
 	server.Handle("GET /api/storage/configuration", authToken(JSONAPIView(storageConfiguration)))
 	server.Handle("GET /api/storage/states", authToken(JSONAPIView(storageStates)))
