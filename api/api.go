@@ -34,8 +34,6 @@ func handleError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, repository.ErrBlobNotFound):
 		fallthrough
-	case errors.Is(err, repository.ErrPackfileNotFound):
-		fallthrough
 	case errors.Is(err, fs.ErrNotExist):
 		fallthrough
 	case errors.Is(err, snapshot.ErrNotFound):
