@@ -145,7 +145,7 @@ func (snap *Snapshot) Search(opts *SearchOpts) (iter.Seq2[*vfs.Entry, error], er
 		return nil, err
 	}
 
-	var n int
+	var n, m int
 	return func(yield func(*vfs.Entry, error) bool) {
 		for entry, err := range it {
 			if err != nil {
@@ -155,11 +155,10 @@ func (snap *Snapshot) Search(opts *SearchOpts) (iter.Seq2[*vfs.Entry, error], er
 
 			// eventually other filters on entry, e.g. size or pattern
 
-			n++
-			if n < opts.Offset {
+			if n++; opts.Offset != 0 && n <= opts.Offset {
 				continue
 			}
-			if n == opts.Limit {
+			if m++; opts.Limit != 0 && m > opts.Limit {
 				return
 			}
 			if !yield(entry, nil) {
