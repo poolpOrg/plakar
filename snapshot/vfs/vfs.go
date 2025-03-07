@@ -234,29 +234,42 @@ func (fsc *Filesystem) ReadDir(path string) (entries []fs.DirEntry, err error) {
 	return dir.ReadDir(-1)
 }
 
+func (fsc *Filesystem) filesbelow(prefix string) iter.Seq2[*Entry, error] {
+	return func(yield func(*Entry, error) bool) {
+		err := fsc.WalkDir(prefix, func(path string, entry *Entry, err error) error {
+			if err != nil {
+				return err
+			}
+			if !yield(entry, nil) {
+				return fs.SkipAll
+			}
+			return nil
+		})
+		if err != nil {
+			yield(nil, err)
+		}
+	}
+}
+
 func (fsc *Filesystem) Files(prefix string) iter.Seq2[*Entry, error] {
 	prefix = path.Clean(prefix)
 	if !strings.HasSuffix(prefix, "/") {
 		prefix += "/"
 	}
 
+	if prefix != "/" {
+		return fsc.filesbelow(prefix)
+	}
+
 	return func(yield func(*Entry, error) bool) {
-		iter, err := fsc.tree.ScanFrom(prefix)
+		iter, err := fsc.tree.ScanAll()
 		if err != nil {
 			yield(nil, err)
 			return
 		}
 
 		for iter.Next() {
-			path, csum := iter.Current()
-
-			// XXX: this could be done in a more efficient way by:
-			// 1. if prefix is "/" just do ScanAll
-			// 2. do a walkdir otherwise
-			if !strings.HasPrefix(path, prefix) {
-				continue
-			}
-
+			_, csum := iter.Current()
 			entry, err := fsc.ResolveEntry(csum)
 			if err != nil {
 				if !yield(nil, err) {
