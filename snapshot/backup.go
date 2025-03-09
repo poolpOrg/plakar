@@ -35,10 +35,10 @@ type BackupContext struct {
 	maxConcurrency chan bool
 	scanCache      *caching.ScanCache
 
-	erridx   *btree.BTree[string, int, *vfs.ErrorItem]
+	erridx   *btree.BTree[string, int, []byte]
 	muerridx sync.Mutex
 
-	xattridx   *btree.BTree[string, int, *vfs.Xattr]
+	xattridx   *btree.BTree[string, int, []byte]
 	muxattridx sync.Mutex
 }
 
@@ -64,16 +64,27 @@ func (bc *BackupContext) recordEntry(entry *vfs.Entry) error {
 }
 
 func (bc *BackupContext) recordError(path string, err error) error {
+	entry := vfs.NewErrorItem(path, err.Error())
+	serialized, e := entry.ToBytes()
+	if e != nil {
+		return err
+	}
+
 	bc.muerridx.Lock()
-	e := bc.erridx.Insert(path, vfs.NewErrorItem(path, err.Error()))
+	e = bc.erridx.Insert(path, serialized)
 	bc.muerridx.Unlock()
 	return e
 }
 
 func (bc *BackupContext) recordXattr(record *importer.ScanRecord, objectMAC objects.MAC, size int64) error {
 	xattr := vfs.NewXattr(record, objectMAC, size)
+	serialized, err := xattr.ToBytes()
+	if err != nil {
+		return err
+	}
+
 	bc.muxattridx.Lock()
-	err := bc.xattridx.Insert(xattr.ToPath(), xattr)
+	err = bc.xattridx.Insert(xattr.ToPath(), serialized)
 	bc.muxattridx.Unlock()
 	return err
 }
@@ -248,7 +259,7 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 		scanCache:      snap.scanCache,
 	}
 
-	errstore := caching.DBStore[string, *vfs.ErrorItem]{
+	errstore := caching.DBStore[string, []byte]{
 		Prefix: "__error__",
 		Cache:  snap.scanCache,
 	}
@@ -257,7 +268,7 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 		return err
 	}
 
-	xattrstore := caching.DBStore[string, *vfs.Xattr]{
+	xattrstore := caching.DBStore[string, []byte]{
 		Prefix: "__xattr__",
 		Cache:  snap.scanCache,
 	}
@@ -472,22 +483,13 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 	}
 	scannerWg.Wait()
 
-	errcsum, err := persistIndex(snap, backupCtx.erridx, resources.RT_ERROR_BTREE, resources.RT_ERROR_NODE, func(e *vfs.ErrorItem) (csum objects.MAC, err error) {
-		serialized, err := e.ToBytes()
-		if err != nil {
-			return
-		}
-		csum = snap.repository.ComputeMAC(serialized)
-		if !snap.BlobExists(resources.RT_ERROR_ENTRY, csum) {
-			err = snap.PutBlob(resources.RT_ERROR_ENTRY, csum, serialized)
-		}
-		return
-	})
+	errcsum, err := persistMACIndex(snap, backupCtx.erridx,
+		resources.RT_ERROR_BTREE, resources.RT_ERROR_NODE, resources.RT_ERROR_ENTRY)
 	if err != nil {
 		return err
 	}
 
-	filestore := caching.DBStore[string, *vfs.Entry]{
+	filestore := caching.DBStore[string, []byte]{
 		Prefix: "__path__",
 		Cache:  snap.scanCache,
 	}
@@ -530,7 +532,12 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 
 			childPath := prefix + relpath
 
-			if err := fileidx.Insert(childPath, childEntry); err != nil && err != btree.ErrExists {
+			serialized, err := childEntry.ToBytes()
+			if err != nil {
+				return err
+			}
+
+			if err := fileidx.Insert(childPath, serialized); err != nil && err != btree.ErrExists {
 				return err
 			}
 
@@ -573,11 +580,11 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 			return err
 		}
 		for erriter.Next() {
-			_, errentry := erriter.Current()
-			if !strings.HasPrefix(errentry.Name, prefix) {
+			path, _ := erriter.Current()
+			if !strings.HasPrefix(path, prefix) {
 				break
 			}
-			if strings.Index(errentry.Name[len(prefix):], "/") != -1 {
+			if strings.Index(path[len(prefix):], "/") != -1 {
 				break
 			}
 			dirEntry.Summary.Below.Errors++
@@ -613,7 +620,12 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 			rootSummary = dirEntry.Summary
 		}
 
-		if err := fileidx.Insert(dirPath, dirEntry); err != nil && err != btree.ErrExists {
+		serialized, err := dirEntry.ToBytes()
+		if err != nil {
+			return err
+		}
+
+		if err := fileidx.Insert(dirPath, serialized); err != nil && err != btree.ErrExists {
 			return err
 		}
 
@@ -622,32 +634,14 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 		}
 	}
 
-	rootcsum, err := persistIndex(snap, fileidx, resources.RT_VFS_BTREE, resources.RT_VFS_NODE, func(entry *vfs.Entry) (csum objects.MAC, err error) {
-		serialized, err := entry.ToBytes()
-		if err != nil {
-			return
-		}
-		csum = snap.repository.ComputeMAC(serialized)
-		if !snap.BlobExists(resources.RT_VFS_ENTRY, csum) {
-			err = snap.PutBlob(resources.RT_VFS_ENTRY, csum, serialized)
-		}
-		return
-	})
+	rootcsum, err := persistMACIndex(snap, fileidx, resources.RT_VFS_BTREE,
+		resources.RT_VFS_NODE, resources.RT_VFS_ENTRY)
 	if err != nil {
 		return err
 	}
 
-	xattrcsum, err := persistIndex(snap, backupCtx.xattridx, resources.RT_XATTR_BTREE, resources.RT_XATTR_NODE, func(xattr *vfs.Xattr) (csum objects.MAC, err error) {
-		serialized, err := xattr.ToBytes()
-		if err != nil {
-			return
-		}
-		csum = snap.repository.ComputeMAC(serialized)
-		if !snap.BlobExists(resources.RT_XATTR_ENTRY, csum) {
-			err = snap.PutBlob(resources.RT_XATTR_ENTRY, csum, serialized)
-		}
-		return
-	})
+	xattrcsum, err := persistMACIndex(snap, backupCtx.xattridx,
+		resources.RT_XATTR_BTREE, resources.RT_XATTR_NODE, resources.RT_XATTR_ENTRY)
 	if err != nil {
 		return err
 	}
