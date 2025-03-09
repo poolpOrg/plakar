@@ -478,9 +478,7 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 			return
 		}
 		csum = snap.repository.ComputeMAC(serialized)
-		if !snap.BlobExists(resources.RT_ERROR_ENTRY, csum) {
-			err = snap.PutBlob(resources.RT_ERROR_ENTRY, csum, serialized)
-		}
+		err = snap.PutBlobIfNotExists(resources.RT_ERROR_ENTRY, csum, serialized)
 		return
 	})
 	if err != nil {
@@ -628,9 +626,7 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 			return
 		}
 		csum = snap.repository.ComputeMAC(serialized)
-		if !snap.BlobExists(resources.RT_VFS_ENTRY, csum) {
-			err = snap.PutBlob(resources.RT_VFS_ENTRY, csum, serialized)
-		}
+		err = snap.PutBlobIfNotExists(resources.RT_VFS_ENTRY, csum, serialized)
 		return
 	})
 	if err != nil {
@@ -643,9 +639,7 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 			return
 		}
 		csum = snap.repository.ComputeMAC(serialized)
-		if !snap.BlobExists(resources.RT_XATTR_ENTRY, csum) {
-			err = snap.PutBlob(resources.RT_XATTR_ENTRY, csum, serialized)
-		}
+		err = snap.PutBlobIfNotExists(resources.RT_XATTR_ENTRY, csum, serialized)
 		return
 	})
 	if err != nil {
@@ -795,10 +789,7 @@ func (snap *Snapshot) chunkify(imp importer.Importer, cf *classifier.Classifier,
 		totalEntropy += chunk.Entropy * float64(len(data))
 		totalDataSize += uint64(len(data))
 
-		if !snap.BlobExists(resources.RT_CHUNK, chunk.ContentMAC) {
-			return snap.PutBlob(resources.RT_CHUNK, chunk.ContentMAC, data)
-		}
-		return nil
+		return snap.PutBlobIfNotExists(resources.RT_CHUNK, chunk.ContentMAC, data)
 	}
 
 	if record.FileInfo.Size() == 0 {

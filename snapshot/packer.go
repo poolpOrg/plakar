@@ -2,11 +2,12 @@ package snapshot
 
 import (
 	"bytes"
-	"golang.org/x/sync/errgroup"
 	"hash"
 	"io"
 	"runtime"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/packfile"
@@ -162,4 +163,12 @@ func (snap *Snapshot) BlobExists(Type resources.Type, mac [32]byte) bool {
 	} else {
 		return snap.repository.BlobExists(Type, mac)
 	}
+}
+
+func (snap *Snapshot) PutBlobIfNotExists(Type resources.Type, mac [32]byte, data []byte) error {
+	snap.Logger().Trace("snapshot", "%x: PutBlobIfNotExists(%s, %064x) len=%d", snap.Header.GetIndexShortID(), Type, mac, len(data))
+	if snap.BlobExists(Type, mac) {
+		return nil
+	}
+	return snap.PutBlob(Type, mac, data)
 }
